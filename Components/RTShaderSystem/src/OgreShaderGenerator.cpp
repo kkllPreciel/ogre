@@ -72,13 +72,13 @@ ShaderGenerator::ShaderGenerator() :
     {
         mShaderLanguage = "glsl";
     }
-    else if (hmgr.isLanguageSupported("cg"))
-    {
-        mShaderLanguage = "cg";
-    }
     else if (hmgr.isLanguageSupported("hlsl"))
     {
         mShaderLanguage = "hlsl";
+    }
+    else if (hmgr.isLanguageSupported("cg"))
+    {
+        mShaderLanguage = "cg";
     }
     else
     {
@@ -87,8 +87,11 @@ ShaderGenerator::ShaderGenerator() :
             "ShaderGenerator::ShaderGenerator" );
     }
 
-    setVertexShaderProfiles("gpu_vp gp4vp vp40 vp30 arbvp1 vs_4_0 vs_4_0_level_9_3 vs_4_0_level_9_1 vs_3_0 vs_2_x vs_2_a vs_2_0 vs_1_1 glslv");
-    setFragmentShaderProfiles("ps_4_0 ps_4_0_level_9_3 ps_4_0_level_9_1 ps_3_x ps_3_0 fp40 fp30 fp20 arbfp1 ps_2_x ps_2_a ps_2_b ps_2_0 ps_1_4 ps_1_3 ps_1_2 ps_1_1 glslf");
+    setShaderProfiles(GPT_VERTEX_PROGRAM, "gpu_vp gp4vp vp40 vp30 arbvp1 vs_4_0 vs_4_0_level_9_3 "
+                                          "vs_4_0_level_9_1 vs_3_0 vs_2_x vs_2_a vs_2_0 vs_1_1 glslv");
+    setShaderProfiles(GPT_FRAGMENT_PROGRAM, "ps_4_0 ps_4_0_level_9_3 ps_4_0_level_9_1 ps_3_x ps_3_0 fp40 "
+                                            "fp30 fp20 arbfp1 ps_2_x ps_2_a ps_2_b ps_2_0 ps_1_4 ps_1_3 "
+                                            "ps_1_2 ps_1_1 glslf");
 }
 
 //-----------------------------------------------------------------------------
@@ -138,17 +141,11 @@ bool ShaderGenerator::_initialize()
     // Allocate script translator manager.
     mScriptTranslatorManager = OGRE_NEW SGScriptTranslatorManager(this);
     ScriptCompilerManager::getSingleton().addTranslatorManager(mScriptTranslatorManager);
-
-    addCustomScriptTranslator("rtshader_system", &mCoreScriptTranslator);
+    ID_RT_SHADER_SYSTEM = ScriptCompilerManager::getSingleton().registerCustomWordId("rtshader_system");
 
     // Create the default scheme.
     createScheme(DEFAULT_SCHEME_NAME);
 	
-	if (Root::getSingleton().getRenderSystem()->getName().find("Direct3D11") != String::npos)
-	{
-		this->setTargetLanguage("hlsl",4.0);
-	}
-
 	mResourceGroupListener = new SGResourceGroupListener(this);
 	ResourceGroupManager::getSingleton().addResourceGroupListener(mResourceGroupListener);
 
@@ -268,8 +265,6 @@ void ShaderGenerator::_destroy()
         OGRE_DELETE mProgramWriterManager;
         mProgramWriterManager = NULL;
     }
-
-    removeCustomScriptTranslator("rtshader_system");
 
     // Delete script translator manager.
     if (mScriptTranslatorManager != NULL)
@@ -541,18 +536,6 @@ ShaderGenerator::SchemeCreateOrRetrieveResult ShaderGenerator::createOrRetrieveS
 
     return SchemeCreateOrRetrieveResult(schemeEntry, wasCreated);
 }
-
-#if !OGRE_RESOURCEMANAGER_STRICT
-//-----------------------------------------------------------------------------
-RenderState* ShaderGenerator::getRenderState(const String& schemeName, 
-                                             const String& materialName, 
-                                             unsigned short passIndex)
-{
-    return getRenderState(schemeName, materialName, 
-        ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME, passIndex);
-}
-#endif
-
 //-----------------------------------------------------------------------------
 RenderState* ShaderGenerator::getRenderState(const String& schemeName, 
                                      const String& materialName, 
@@ -636,18 +619,52 @@ void ShaderGenerator::_setActiveSceneManager(SceneManager* sceneManager)
 }
 
 //-----------------------------------------------------------------------------
-void ShaderGenerator::setVertexShaderProfiles(const String& vertexShaderProfiles)
+void ShaderGenerator::setShaderProfiles(GpuProgramType type, const String& shaderProfiles)
 {
-    mVertexShaderProfiles = vertexShaderProfiles;
-    mVertexShaderProfilesList = StringUtil::split(vertexShaderProfiles);
-}
-//-----------------------------------------------------------------------------
-void ShaderGenerator::setFragmentShaderProfiles(const String& fragmentShaderProfiles)
-{
-    mFragmentShaderProfiles = fragmentShaderProfiles;
-    mFragmentShaderProfilesList = StringUtil::split(fragmentShaderProfiles);
+    switch(type)
+    {
+    case GPT_VERTEX_PROGRAM:
+        mVertexShaderProfiles = shaderProfiles;
+        mVertexShaderProfilesList = StringUtil::split(shaderProfiles);
+        break;
+    case GPT_FRAGMENT_PROGRAM:
+        mFragmentShaderProfiles = shaderProfiles;
+        mFragmentShaderProfilesList = StringUtil::split(shaderProfiles);
+        break;
+    default:
+        OgreAssert(false, "not implemented");
+        break;
+    }
 }
 
+const String& ShaderGenerator::getShaderProfiles(GpuProgramType type) const
+{
+    switch(type)
+    {
+    case GPT_VERTEX_PROGRAM:
+        return mVertexShaderProfiles;
+    case GPT_FRAGMENT_PROGRAM:
+        return mFragmentShaderProfiles;
+    default:
+        return BLANKSTRING;
+    }
+}
+
+const StringVector& ShaderGenerator::getShaderProfilesList(GpuProgramType type)
+{
+    switch(type)
+    {
+    case GPT_VERTEX_PROGRAM:
+        return mVertexShaderProfilesList;
+    case GPT_FRAGMENT_PROGRAM:
+        return mFragmentShaderProfilesList;
+    default:
+        break;
+    }
+
+    static StringVector empty;
+    return empty;
+}
 //-----------------------------------------------------------------------------
 bool ShaderGenerator::hasShaderBasedTechnique(const String& materialName, 
                                               const String& srcTechniqueSchemeName, 
@@ -688,42 +705,6 @@ bool ShaderGenerator::hasShaderBasedTechnique(const String& materialName,
         }
     }
     return false;
-}
-#if !OGRE_RESOURCEMANAGER_STRICT
-//-----------------------------------------------------------------------------
-bool ShaderGenerator::createShaderBasedTechnique(const String& materialName, 
-                                                 const String& srcTechniqueSchemeName, 
-                                                 const String& dstTechniqueSchemeName,
-                                                 bool overProgrammable)
-{
-    return createShaderBasedTechnique(materialName, ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
-        srcTechniqueSchemeName, dstTechniqueSchemeName, overProgrammable);
-}
-#endif
-
-//-----------------------------------------------------------------------------
-bool ShaderGenerator::createShaderBasedTechnique(const String& materialName,
-                                                 const String& groupName,
-                                                 const String& srcTechniqueSchemeName,
-                                                 const String& dstTechniqueSchemeName,
-                                                 bool overProgrammable)
-{
-    // Make sure material exists.
-    MaterialPtr srcMat = MaterialManager::getSingleton().getByName(materialName, groupName);
-    if (!srcMat)
-        return false;
-
-    // Update group name in case it is AUTODETECT_RESOURCE_GROUP_NAME
-    const String& trueGroupName = srcMat->getGroup();
-
-    // Case the requested material belongs to different group and it is not AUTODETECT_RESOURCE_GROUP_NAME.
-    if (trueGroupName != groupName &&
-        groupName != ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME)
-    {
-        return false;
-    }
-
-    return createShaderBasedTechnique(*srcMat, srcTechniqueSchemeName, dstTechniqueSchemeName, overProgrammable);
 }
 //-----------------------------------------------------------------------------
 static bool hasFixedFunctionPass(Technique* tech)
@@ -836,18 +817,6 @@ bool ShaderGenerator::createShaderBasedTechnique(const Material& srcMat,
         
     return true;
 }
-
-#if !OGRE_RESOURCEMANAGER_STRICT
-//-----------------------------------------------------------------------------
-bool ShaderGenerator::removeShaderBasedTechnique(const String& materialName, 
-                                                 const String& srcTechniqueSchemeName, 
-                                                 const String& dstTechniqueSchemeName)
-{
-    return removeShaderBasedTechnique(materialName,ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
-        srcTechniqueSchemeName,dstTechniqueSchemeName);
-}
-#endif
-
 //-----------------------------------------------------------------------------
 bool ShaderGenerator::removeShaderBasedTechnique(const String& materialName, 
                                                  const String& groupName, 
@@ -978,7 +947,7 @@ bool ShaderGenerator::cloneShaderBasedTechniques(const String& srcMaterialName,
     //
 
     //first gather the techniques to remove
-    set<unsigned short>::type schemesToRemove;
+    std::set<unsigned short> schemesToRemove;
     unsigned short techCount = srcMat->getNumTechniques();
     for(unsigned short ti = 0 ; ti < techCount ; ++ti)
     {
@@ -1216,60 +1185,19 @@ void ShaderGenerator::flushShaderCache()
 }
 
 //-----------------------------------------------------------------------------
-bool ShaderGenerator::addCustomScriptTranslator(const String& key, ScriptTranslator* translator)
-{
-    OGRE_LOCK_AUTO_MUTEX;
-
-    SGScriptTranslatorIterator itFind = mScriptTranslatorsMap.find(key);
-
-    if (itFind != mScriptTranslatorsMap.end())  
-        return false;
-    
-    mScriptTranslatorsMap[key] = translator;
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-bool ShaderGenerator::removeCustomScriptTranslator(const String& key)
-{
-    OGRE_LOCK_AUTO_MUTEX;
-
-    SGScriptTranslatorIterator itFind = mScriptTranslatorsMap.find(key);
-
-    if (itFind == mScriptTranslatorsMap.end())  
-        return false;
-
-    mScriptTranslatorsMap.erase(itFind);
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-size_t ShaderGenerator::getNumTranslators() const
-{
-    OGRE_LOCK_AUTO_MUTEX;
-
-    return mScriptTranslatorsMap.size();
-}
-
-//-----------------------------------------------------------------------------
 ScriptTranslator* ShaderGenerator::getTranslator(const AbstractNodePtr& node)
 {
     OGRE_LOCK_AUTO_MUTEX;
 
-    ScriptTranslator *translator = 0;
+    if(node->type != ANT_OBJECT)
+        return NULL;
     
-    if(node->type == Ogre::ANT_OBJECT)
-    {
-        ObjectAbstractNode *obj           = static_cast<ObjectAbstractNode*>(node.get());
-        SGScriptTranslatorIterator itFind = mScriptTranslatorsMap.find(obj->cls);
-        
-        if(itFind != mScriptTranslatorsMap.end())
-            translator = itFind->second;
-    }
+    ObjectAbstractNode *obj = static_cast<ObjectAbstractNode*>(node.get());
+
+    if(obj->id == ID_RT_SHADER_SYSTEM)
+        return &mCoreScriptTranslator;
     
-    return translator;
+    return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -1353,29 +1281,14 @@ void ShaderGenerator::serializeTextureUnitStateAttributes(MaterialSerializer* se
 }
 
 //-----------------------------------------------------------------------------
-size_t ShaderGenerator::getVertexShaderCount() const
+size_t ShaderGenerator::getShaderCount(GpuProgramType type) const
 {
-    return mProgramManager->getVertexShaderCount();
+    return mProgramManager->getShaderCount(type);
 }
 
 //-----------------------------------------------------------------------------
-size_t ShaderGenerator::getFragmentShaderCount() const
+void ShaderGenerator::setTargetLanguage(const String& shaderLanguage)
 {
-    return mProgramManager->getFragmentShaderCount();
-}
-
-//-----------------------------------------------------------------------------
-void ShaderGenerator::setTargetLanguage(const String& shaderLanguage,const float version)
-{
-	
-	if (Ogre::Root::getSingleton().getRenderSystem()->getName().find("Direct3D11") != String::npos)
-	{
-		if (shaderLanguage != "hlsl" || version < 4.0)
-			OGRE_EXCEPT(Exception::ERR_DUPLICATE_ITEM,
-			"Direct3D11 supports hlsl 4.0 and above'",
-			"ShaderGenerator::setTargetLanguage");
-	}
-	
     // Make sure that the shader language is supported.
     if (HighLevelGpuProgramManager::getSingleton().isLanguageSupported(shaderLanguage) == false)
     {
@@ -1385,10 +1298,9 @@ void ShaderGenerator::setTargetLanguage(const String& shaderLanguage,const float
     }
 
     // Case target language changed -> flush the shaders cache.
-    if (mShaderLanguage != shaderLanguage || mShaderLanguageVersion != version )
+    if (mShaderLanguage != shaderLanguage)
     {
         mShaderLanguage = shaderLanguage;
-        mShaderLanguageVersion = version;
         flushShaderCache();
     }
 }

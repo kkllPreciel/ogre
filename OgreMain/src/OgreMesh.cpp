@@ -322,7 +322,7 @@ namespace Ogre {
         newMesh->mIndexBufferShadowBuffer = mIndexBufferShadowBuffer;
 
         // Copy submeshes first
-        vector<SubMesh*>::type::iterator subi;
+        std::vector<SubMesh*>::iterator subi;
         for (subi = mSubMeshList.begin(); subi != mSubMeshList.end(); ++subi)
         {
             (*subi)->clone("", newMesh.get());
@@ -629,7 +629,7 @@ namespace Ogre {
         }
     }
     //-----------------------------------------------------------------------
-    typedef multimap<Real, Mesh::VertexBoneAssignmentList::iterator>::type WeightIteratorMap;
+    typedef std::multimap<Real, Mesh::VertexBoneAssignmentList::iterator> WeightIteratorMap;
     unsigned short Mesh::_rationaliseBoneAssignments(size_t vertexCount, Mesh::VertexBoneAssignmentList& assignments)
     {
         // Iterate through, finding the largest # bones per vertex
@@ -752,7 +752,7 @@ namespace Ogre {
             return;
         }
 
-        typedef set<unsigned short>::type BoneIndexSet;
+        typedef std::set<unsigned short> BoneIndexSet;
         BoneIndexSet usedBoneIndices;
 
         // Collect actually used bones
@@ -992,11 +992,11 @@ namespace Ogre {
     //---------------------------------------------------------------------
     static Real _computeBoneBoundingRadiusHelper( VertexData* vertexData,
         const Mesh::VertexBoneAssignmentList& boneAssignments,
-        const vector<Vector3>::type& bonePositions,
-        const vector< vector<ushort>::type >::type& boneChildren
+        const std::vector<Vector3>& bonePositions,
+        const std::vector< std::vector<ushort> >& boneChildren
         )
     {
-        vector<Vector3>::type vertexPositions;
+        std::vector<Vector3> vertexPositions;
         {
             // extract vertex positions
             const VertexElement* posElem = vertexData->vertexDeclaration->findElementBySemantic(VES_POSITION);
@@ -1056,8 +1056,8 @@ namespace Ogre {
         if (mBoneBoundingRadius == Real(0) && mSkeleton)
         {
             Real radius = Real(0);
-            vector<Vector3>::type bonePositions;
-            vector< vector<ushort>::type >::type boneChildren;  // for each bone, a list of children
+            std::vector<Vector3> bonePositions;
+            std::vector< std::vector<ushort> > boneChildren;  // for each bone, a list of children
             {
                 // extract binding pose bone positions, and also indices for child bones
                 uint16 numBones = mSkeleton->getNumBones();
@@ -1692,7 +1692,7 @@ namespace Ogre {
         for (unsigned short lodIndex = 0; lodIndex < (unsigned short)mMeshLodUsageList.size(); ++lodIndex)
         {
             // use getLodLevel to enforce loading of manual mesh lods
-            MeshLodUsage& usage = const_cast<MeshLodUsage&>(getLodLevel(lodIndex));
+            const MeshLodUsage& usage = getLodLevel(lodIndex);
 
             if (!usage.manualName.empty() && lodIndex != 0)
             {
@@ -1912,8 +1912,8 @@ namespace Ogre {
 #endif
     }
     //---------------------------------------------------------------------
-    void Mesh::prepareMatricesForVertexBlend(const Matrix4** blendMatrices,
-        const Matrix4* boneMatrices, const IndexMap& indexMap)
+    void Mesh::prepareMatricesForVertexBlend(const Affine3** blendMatrices,
+        const Affine3* boneMatrices, const IndexMap& indexMap)
     {
         assert(indexMap.size() <= 256);
         IndexMap::const_iterator it, itend;
@@ -1926,7 +1926,7 @@ namespace Ogre {
     //---------------------------------------------------------------------
     void Mesh::softwareVertexBlend(const VertexData* sourceVertexData,
         const VertexData* targetVertexData,
-        const Matrix4* const* blendMatrices, size_t numMatrices,
+        const Affine3* const* blendMatrices, size_t numMatrices,
         bool blendNormals)
     {
         float *pSrcPos = 0;
@@ -2120,8 +2120,8 @@ namespace Ogre {
     }
     //---------------------------------------------------------------------
     void Mesh::softwareVertexPoseBlend(Real weight,
-        const map<size_t, Vector3>::type& vertexOffsetMap,
-        const map<size_t, Vector3>::type& normalsMap,
+        const std::map<size_t, Vector3>& vertexOffsetMap,
+        const std::map<size_t, Vector3>& normalsMap,
         VertexData* targetVertexData)
     {
         // Do nothing if no weight
@@ -2146,7 +2146,7 @@ namespace Ogre {
             destBuf->lock(HardwareBuffer::HBL_NORMAL));
                 
         // Iterate over affected vertices
-        for (map<size_t, Vector3>::type::const_iterator i = vertexOffsetMap.begin();
+        for (std::map<size_t, Vector3>::const_iterator i = vertexOffsetMap.begin();
             i != vertexOffsetMap.end(); ++i)
         {
             // Adjust pointer
@@ -2165,7 +2165,7 @@ namespace Ogre {
         {
             float* pNormBase;
             normElem->baseVertexPointerToElement((void*)pBase, &pNormBase);
-            for (map<size_t, Vector3>::type::const_iterator i = normalsMap.begin();
+            for (std::map<size_t, Vector3>::const_iterator i = normalsMap.begin();
                 i != normalsMap.end(); ++i)
             {
                 // Adjust pointer
@@ -2532,7 +2532,7 @@ namespace Ogre {
     void Mesh::updateMaterialForAllSubMeshes(void)
     {
         // iterate through each sub mesh and request the submesh to update its material
-        vector<SubMesh*>::type::iterator subi;
+        std::vector<SubMesh*>::iterator subi;
         for (subi = mSubMeshList.begin(); subi != mSubMeshList.end(); ++subi)
         {
             (*subi)->updateMaterialUsingTextureAliases();

@@ -69,17 +69,9 @@ namespace Ogre
             {
                 getVertexProgram()->setLinked(true);
                 mLinked |= VERTEX_PROGRAM_LINKED;
-                mTriedToLinkAndFailed = false;
             }
             else
             {
-                if(!getVertexProgram()->compile(true)) {
-                    LogManager::getSingleton().stream(LML_CRITICAL)
-                            << "Vertex Program " << getVertexProgram()->getName()
-                            << " failed to compile. See compile log above for details.";
-                    mTriedToLinkAndFailed = true;
-                    return;
-                }
                 GLuint programHandle = getVertexProgram()->getGLProgramHandle();
 
                 bindFixedAttributes( programHandle );
@@ -94,9 +86,7 @@ namespace Ogre
                     getVertexProgram()->setLinked(linkStatus);
                     mLinked |= VERTEX_PROGRAM_LINKED;
                 }
-                
-                mTriedToLinkAndFailed = !linkStatus;
-                
+
                 GLSLES::logObjectInfo( getCombinedName() + String("GLSL vertex program result : "), programHandle );
 
                 setSkeletalAnimationIncluded(getVertexProgram()->isSkeletalAnimationIncluded());
@@ -116,18 +106,9 @@ namespace Ogre
             {
                 mFragmentProgram->setLinked(true);
                 mLinked |= FRAGMENT_PROGRAM_LINKED;
-                mTriedToLinkAndFailed = false;
             }
             else
             {
-                if(!mFragmentProgram->compile(true)) {
-                    LogManager::getSingleton().stream(LML_CRITICAL)
-                            << "Fragment Program " << mFragmentProgram->getName()
-                            << " failed to compile. See compile log above for details.";
-                    mTriedToLinkAndFailed = true;
-                    return;
-                }
-
                 GLuint programHandle = mFragmentProgram->getGLProgramHandle();
                 OGRE_CHECK_GL_ERROR(glProgramParameteriEXT(programHandle, GL_PROGRAM_SEPARABLE_EXT, GL_TRUE));
                 mFragmentProgram->attachToProgramObject(programHandle);
@@ -139,8 +120,6 @@ namespace Ogre
                     mFragmentProgram->setLinked(linkStatus);
                     mLinked |= FRAGMENT_PROGRAM_LINKED;
                 }
-
-                mTriedToLinkAndFailed = !linkStatus;
 
                 GLSLES::logObjectInfo( getCombinedName() + String("GLSL fragment program result : "), programHandle );
             }
@@ -181,7 +160,7 @@ namespace Ogre
     //-----------------------------------------------------------------------
     void GLSLESProgramPipeline::activate(void)
     {
-        if (!mLinked && !mTriedToLinkAndFailed)
+        if (!mLinked)
         {
             glGetError(); // Clean up the error. Otherwise will flood log.
             
@@ -288,9 +267,7 @@ namespace Ogre
                         case GCT_SAMPLER2DSHADOW:
                         case GCT_SAMPLER3D:
                         case GCT_SAMPLERCUBE:
-#if OGRE_NO_GLES3_SUPPORT == 0
                         case GCT_SAMPLER2DARRAY:
-#endif
                             shouldUpdate = uniformCache->updateUniform(currentUniform->mLocation,
                                                                         params->getIntPointer(def->physicalIndex),
                                                                         static_cast<GLsizei>(def->elementSize * def->arraySize * sizeof(int)));
@@ -358,14 +335,11 @@ namespace Ogre
                         case GCT_SAMPLER2DSHADOW:
                         case GCT_SAMPLER3D:
                         case GCT_SAMPLERCUBE:
-#if OGRE_NO_GLES3_SUPPORT == 0
                         case GCT_SAMPLER2DARRAY:
-#endif
                             // Samplers handled like 1-element ints
                             OGRE_CHECK_GL_ERROR(glProgramUniform1ivEXT(progID, currentUniform->mLocation, 1,
                                                                        params->getIntPointer(def->physicalIndex)));
                             break;
-#if OGRE_NO_GLES3_SUPPORT == 0
                         case GCT_MATRIX_2X3:
                             OGRE_CHECK_GL_ERROR(glProgramUniformMatrix2x3fvEXT(progID, currentUniform->mLocation, glArraySize,
                                                                             GL_FALSE, params->getFloatPointer(def->physicalIndex)));
@@ -390,15 +364,6 @@ namespace Ogre
                             OGRE_CHECK_GL_ERROR(glProgramUniformMatrix4x3fvEXT(progID, currentUniform->mLocation, glArraySize,
                                                                             GL_FALSE, params->getFloatPointer(def->physicalIndex)));
                             break;
-#else
-                        case GCT_MATRIX_2X3:
-                        case GCT_MATRIX_2X4:
-                        case GCT_MATRIX_3X2:
-                        case GCT_MATRIX_3X4:
-                        case GCT_MATRIX_4X2:
-                        case GCT_MATRIX_4X3:
-                        case GCT_SAMPLER2DARRAY:
-#endif
                         case GCT_UNKNOWN:
                         case GCT_SUBROUTINE:
                         case GCT_DOUBLE1:

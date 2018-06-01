@@ -404,7 +404,7 @@ namespace Ogre
     }
 
     //-------------------------------------------------------------------------------------------------//
-    void* GLXGLSupport::getProcAddress(const char* procname) {
+    void* GLXGLSupport::getProcAddress(const char* procname) const {
         return (void*)glXGetProcAddressARB((const GLubyte*)procname);
     }
 
@@ -854,7 +854,7 @@ namespace Ogre
             XSetErrorHandler(&ctxErrorHandler);
 
         PFNGLXCREATECONTEXTATTRIBSARBPROC _glXCreateContextAttribsARB;
-        _glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)const_cast<GLXGLSupport*>(this)->getProcAddress("glXCreateContextAttribsARB");
+        _glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)getProcAddress("glXCreateContextAttribsARB");
 
 	OgreAssert(_glXCreateContextAttribsARB, "glXCreateContextAttribsARB() function not found");
 
@@ -873,7 +873,7 @@ namespace Ogre
                 if(context_attribs[3] == 0)
                 {
                     context_attribs[1] -= 1;
-                    context_attribs[3] = 5;
+                    context_attribs[3] = 6;
                 }
                 else
                 {

@@ -46,7 +46,7 @@ namespace Ogre
 
     class AndroidLogListener;
 
-    typedef vector<RenderSystem*>::type RenderSystemList;
+    typedef std::vector<RenderSystem*> RenderSystemList;
     
     /** The root class of the Ogre system.
         @remarks
@@ -72,76 +72,79 @@ namespace Ogre
         String mVersion;
         String mConfigFileName;
         bool mQueuedEnd;
-        /// In case multiple render windows are created, only once are the resources loaded.
+        // In case multiple render windows are created, only once are the resources loaded.
         bool mFirstTimePostWindowInit;
 
-        // Singletons
-        LogManager* mLogManager;
-        ControllerManager* mControllerManager;
-        SceneManagerEnumerator* mSceneManagerEnum;
-        typedef deque<SceneManager*>::type SceneManagerStack;
-        SceneManagerStack mSceneManagerStack;
-        DynLibManager* mDynLibManager;
-        ArchiveManager* mArchiveManager;
-        MaterialManager* mMaterialManager;
-        MeshManager* mMeshManager;
-        ParticleSystemManager* mParticleManager;
-        SkeletonManager* mSkeletonManager;
-        
-        ArchiveFactory *mZipArchiveFactory;
-        ArchiveFactory *mEmbeddedZipArchiveFactory;
-        ArchiveFactory *mFileSystemArchiveFactory;
-        
+        // ordered in reverse destruction sequence
+        std::unique_ptr<LogManager> mLogManager;
 #if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
-        AndroidLogListener* mAndroidLogger;
+        std::unique_ptr<AndroidLogListener> mAndroidLogger;
 #endif
-        
-        ResourceGroupManager* mResourceGroupManager;
-        ResourceBackgroundQueue* mResourceBackgroundQueue;
-        ShadowTextureManager* mShadowTextureManager;
-        RenderSystemCapabilitiesManager* mRenderSystemCapabilitiesManager;
-        ScriptCompilerManager *mCompilerManager;
-        LodStrategyManager *mLodStrategyManager;
+        std::unique_ptr<ScriptCompilerManager> mCompilerManager;
+        std::unique_ptr<DynLibManager> mDynLibManager;
+        std::unique_ptr<Timer> mTimer;
+        std::unique_ptr<WorkQueue> mWorkQueue;
+        std::unique_ptr<ResourceGroupManager> mResourceGroupManager;
+        std::unique_ptr<ResourceBackgroundQueue> mResourceBackgroundQueue;
+        std::unique_ptr<MaterialManager> mMaterialManager;
+        std::unique_ptr<HighLevelGpuProgramManager> mHighLevelGpuProgramManager;
+        std::unique_ptr<ControllerManager> mControllerManager;
+        std::unique_ptr<MeshManager> mMeshManager;
+        std::unique_ptr<SkeletonManager> mSkeletonManager;
 
-        Timer* mTimer;
+        std::unique_ptr<ArchiveFactory> mFileSystemArchiveFactory;
+        std::unique_ptr<ArchiveFactory> mEmbeddedZipArchiveFactory;
+        std::unique_ptr<ArchiveFactory> mZipArchiveFactory;
+        std::unique_ptr<ArchiveManager> mArchiveManager;
+
+        typedef std::map<String, MovableObjectFactory*> MovableObjectFactoryMap;
+        MovableObjectFactoryMap mMovableObjectFactoryMap;
+        std::unique_ptr<MovableObjectFactory> mRibbonTrailFactory;
+        std::unique_ptr<MovableObjectFactory> mBillboardChainFactory;
+        std::unique_ptr<MovableObjectFactory> mManualObjectFactory;
+        std::unique_ptr<MovableObjectFactory> mBillboardSetFactory;
+        std::unique_ptr<MovableObjectFactory> mLightFactory;
+        std::unique_ptr<MovableObjectFactory> mEntityFactory;
+
+        std::unique_ptr<ParticleSystemManager> mParticleManager;
+        std::unique_ptr<LodStrategyManager> mLodStrategyManager;
+        std::unique_ptr<Profiler> mProfiler;
+
+        std::unique_ptr<ExternalTextureSourceManager> mExternalTextureSourceManager;
+        std::unique_ptr<CompositorManager> mCompositorManager;
+        std::unique_ptr<RenderSystemCapabilitiesManager> mRenderSystemCapabilitiesManager;
+
+        std::unique_ptr<SceneManagerEnumerator> mSceneManagerEnum;
+        typedef std::deque<SceneManager*> SceneManagerStack;
+        SceneManagerStack mSceneManagerStack;
+
+        std::unique_ptr<ShadowTextureManager> mShadowTextureManager;
+
+        std::unique_ptr<SceneLoaderManager> mSceneLoaderManager;
+
         RenderWindow* mAutoWindow;
-        Profiler* mProfiler;
-        HighLevelGpuProgramManager* mHighLevelGpuProgramManager;
-        ExternalTextureSourceManager* mExternalTextureSourceManager;
-        CompositorManager* mCompositorManager;      
+
         unsigned long mNextFrame;
         Real mFrameSmoothingTime;
         bool mRemoveQueueStructuresOnClear;
         Real mDefaultMinPixelSize;
 
     public:
-        typedef vector<DynLib*>::type PluginLibList;
-        typedef vector<Plugin*>::type PluginInstanceList;
+        typedef std::vector<DynLib*> PluginLibList;
+        typedef std::vector<Plugin*> PluginInstanceList;
     protected:
         /// List of plugin DLLs loaded
         PluginLibList mPluginLibs;
         /// List of Plugin instances registered
         PluginInstanceList mPlugins;
 
-        typedef map<String, MovableObjectFactory*>::type MovableObjectFactoryMap;
-        MovableObjectFactoryMap mMovableObjectFactoryMap;
         uint32 mNextMovableObjectTypeFlag;
-        // stock movable factories
-        MovableObjectFactory* mEntityFactory;
-        MovableObjectFactory* mLightFactory;
-        MovableObjectFactory* mBillboardSetFactory;
-        MovableObjectFactory* mManualObjectFactory;
-        MovableObjectFactory* mBillboardChainFactory;
-        MovableObjectFactory* mRibbonTrailFactory;
 
-        typedef map<String, RenderQueueInvocationSequence*>::type RenderQueueInvocationSequenceMap;
+        typedef std::map<String, RenderQueueInvocationSequence*> RenderQueueInvocationSequenceMap;
         RenderQueueInvocationSequenceMap mRQSequenceMap;
 
         /// Are we initialised yet?
         bool mIsInitialised;
-
-        WorkQueue* mWorkQueue;
-
         ///Tells whether blend indices information needs to be passed to the GPU
         bool mIsBlendIndicesGpuRedundant;
         ///Tells whether blend weights information needs to be passed to the GPU
@@ -172,11 +175,11 @@ namespace Ogre
         void oneTimePostWindowInit(void);
 
         /** Set of registered frame listeners */
-        set<FrameListener*>::type mFrameListeners;
+        std::set<FrameListener*> mFrameListeners;
 
         /** Set of frame listeners marked for removal and addition*/
-        set<FrameListener*>::type mRemovedFrameListeners;
-        set<FrameListener*>::type mAddedFrameListeners;
+        std::set<FrameListener*> mRemovedFrameListeners;
+        std::set<FrameListener*> mAddedFrameListeners;
         void _syncAddedRemovedFrameListeners();
 
         /** Indicates the type of event to be considered by calculateEventTime(). */
@@ -189,7 +192,7 @@ namespace Ogre
         };
 
         /// Contains the times of recently fired events
-        typedef deque<unsigned long>::type EventTimesQueue;
+        typedef std::deque<unsigned long> EventTimesQueue;
         EventTimesQueue mEventTimes[FETT_COUNT];
 
         /** Internal method for calculating the average time between recently fired events.
@@ -359,7 +362,7 @@ namespace Ogre
         /// @copydoc SceneManagerEnumerator::addFactory
         void removeSceneManagerFactory(SceneManagerFactory* fact);
 
-        /// @copydoc SceneManagerEnumerator::getMetaData(const String& )
+        /// @copydoc SceneManagerEnumerator::getMetaData(const String& )const
         const SceneManagerMetaData* getSceneManagerMetaData(const String& typeName) const;
 
         /// @copydoc SceneManagerEnumerator::getMetaData()
@@ -551,15 +554,9 @@ namespace Ogre
         @param filename The name of the file to open. 
         @param groupName The name of the group in which to create the file, if the 
             resource system is used
-        @param locationPattern If the resource group contains multiple locations, 
-            then usually the file will be created in the first writable location. If you 
-            want to be more specific, you can include a location pattern here and 
-            only locations which match that pattern (as determined by StringUtil::match)
-            will be considered candidates for creation.
         */      
         static DataStreamPtr openFileStream(const String& filename,
-                const String& groupName = ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-                const String& locationPattern = BLANKSTRING);
+                const String& groupName = ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
         /** Generates a packed data version of the passed in ColourValue suitable for
             use with the current RenderSystem.
@@ -921,7 +918,7 @@ namespace Ogre
             However, you must remember to assign yourself a new channel through 
             which to process your tasks.
         */
-        WorkQueue* getWorkQueue() const { return mWorkQueue; }
+        WorkQueue* getWorkQueue() const { return mWorkQueue.get(); }
 
         /** Replace the current work queue with an alternative. 
             You can use this method to replace the internal implementation of

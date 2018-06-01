@@ -82,7 +82,7 @@ namespace Ogre
         bool operator >= ( const Radian& r ) const { return mRad >= r.mRad; }
         bool operator >  ( const Radian& r ) const { return mRad >  r.mRad; }
 
-        inline _OgreExport friend std::ostream& operator <<
+        inline friend std::ostream& operator <<
             ( std::ostream& o, const Radian& v )
         {
             o << "Radian(" << v.valueRadians() << ")";
@@ -133,7 +133,7 @@ namespace Ogre
         bool operator >= ( const Degree& d ) const { return mDeg >= d.mDeg; }
         bool operator >  ( const Degree& d ) const { return mDeg >  d.mDeg; }
 
-        inline _OgreExport friend std::ostream& operator <<
+        inline friend std::ostream& operator <<
             ( std::ostream& o, const Degree& v )
         {
             o << "Degree(" << v.valueDegrees() << ")";
@@ -656,7 +656,7 @@ namespace Ogre
         @param normalIsOutside Does the normal point outside the volume
         */
         static std::pair<bool, Real> intersects(
-            const Ray& ray, const vector<Plane>::type& planeList, 
+            const Ray& ray, const std::vector<Plane>& planeList, 
             bool normalIsOutside);
         /** Ray / convex plane list intersection test. 
         @param ray The ray to test with
@@ -664,7 +664,7 @@ namespace Ogre
         @param normalIsOutside Does the normal point outside the volume
         */
         static std::pair<bool, Real> intersects(
-            const Ray& ray, const list<Plane>::type& planeList, 
+            const Ray& ray, const std::list<Plane>& planeList, 
             bool normalIsOutside);
 
         /** Sphere / plane intersection test. 
@@ -685,7 +685,7 @@ namespace Ogre
             Real u1, Real v1, Real u2, Real v2, Real u3, Real v3);
 
         /** Build a reflection matrix for the passed in plane. */
-        static Matrix4 buildReflectionMatrix(const Plane& p);
+        static Affine3 buildReflectionMatrix(const Plane& p);
         /** Calculate a face normal, including the w component which is the offset from the origin. */
         static Vector4 calculateFaceNormal(const Vector3& v1, const Vector3& v2, const Vector3& v3);
         /** Calculate a face normal, no w-information. */
@@ -708,8 +708,8 @@ namespace Ogre
             return std::max(std::min(val, maxval), minval);
         }
 
-        static Matrix4 makeViewMatrix(const Vector3& position, const Quaternion& orientation, 
-            const Matrix4* reflectMatrix = 0);
+        static Affine3 makeViewMatrix(const Vector3& position, const Quaternion& orientation,
+            const Affine3* reflectMatrix = 0);
 
         /** Get the radius of the origin-centered bounding sphere from the bounding box. */
         static Real boundingRadiusFromAABB(const AxisAlignedBox& aabb);

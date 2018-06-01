@@ -45,7 +45,7 @@ namespace Ogre {
     class Pool
     {
     protected:
-        typedef typename list<T>::type ItemList;
+        typedef typename std::list<T> ItemList;
         ItemList mItems;
         OGRE_AUTO_MUTEX;
     public:
@@ -125,11 +125,7 @@ namespace Ogre {
         virtual ~ResourceManager();
 
         /** Creates a new blank resource, but does not immediately load it.
-        @remarks
-            Resource managers handle disparate types of resources, so if you want
-            to get at the detailed interface of this resource, you'll have to 
-            cast the result to the subclass you know you're creating. 
-        @param name The unique name of the resource
+        @param name The unique name of the %Resource
         @param group The name of the resource group to attach this new resource to
         @param isManual Is this resource manually loaded? If so, you should really
             populate the loader parameter in order that the load process
@@ -156,8 +152,7 @@ namespace Ogre {
             in one call so there are no race conditions if using multiple
             threads that could cause getByName() to return null, but create() to
             fail because another thread created a resource in between.
-        @see ResourceManager::createResource
-        @see ResourceManager::getResourceByName
+        @copydetails ResourceManager::createResource
         @return A pair, the first element being the pointer, and the second being 
             an indicator specifying whether the resource was newly created.
         */
@@ -188,12 +183,7 @@ namespace Ogre {
             as much as they can and wait to be reloaded.
             @see ResourceGroupManager for unloading of resource groups.
         */
-        void
-#if OGRE_RESOURCEMANAGER_STRICT
-        unload(const String& name, const String& group);
-#else
-        unload(const String& name, const String& group = ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
-#endif
+        void  unload(const String& name, const String& group OGRE_RESOURCE_GROUP_INIT);
         
         /** Unloads a single resource by handle.
         @remarks
@@ -307,13 +297,7 @@ namespace Ogre {
         void remove(const ResourcePtr& r);
 
         /// @overload
-        void
-#if OGRE_RESOURCEMANAGER_STRICT
-        remove(const String& name, const String& group);
-
-#else
-        remove(const String& name, const String& group = ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
-#endif
+        void remove(const String& name, const String& group OGRE_RESOURCE_GROUP_INIT);
         
         /// @overload
         void remove(ResourceHandle handle);
@@ -351,23 +335,14 @@ namespace Ogre {
 
         /** Retrieves a pointer to a resource by name, or null if the resource does not exist.
         */
-        virtual ResourcePtr
-#if OGRE_RESOURCEMANAGER_STRICT
-        getResourceByName(const String& name, const String& groupName);
-#else
-        getResourceByName(const String& name, const String& groupName = ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
-#endif
+        virtual ResourcePtr getResourceByName(const String& name, const String& groupName OGRE_RESOURCE_GROUP_INIT);
+
         /** Retrieves a pointer to a resource by handle, or null if the resource does not exist.
         */
         virtual ResourcePtr getByHandle(ResourceHandle handle);
         
         /// Returns whether the named resource exists in this manager
-        bool
-#if OGRE_RESOURCEMANAGER_STRICT
-        resourceExists(const String& name, const String& group)
-#else
-        resourceExists(const String& name, const String& group = ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME)
-#endif
+        bool resourceExists(const String& name, const String& group OGRE_RESOURCE_GROUP_INIT)
         {
             return getResourceByName(name, group).get() != 0;
         }
@@ -395,7 +370,7 @@ namespace Ogre {
         /** Generic prepare method, used to create a Resource specific to this 
             ResourceManager without using one of the specialised 'prepare' methods
             (containing per-Resource-type parameters).
-        @param name The name of the Resource
+        @param name The name of the %Resource
         @param group The resource group to which this resource will belong
         @param isManual Is the resource to be manually loaded? If so, you should
             provide a value for the loader parameter
@@ -415,17 +390,7 @@ namespace Ogre {
         /** Generic load method, used to create a Resource specific to this 
             ResourceManager without using one of the specialised 'load' methods
             (containing per-Resource-type parameters).
-        @param name The name of the Resource
-        @param group The resource group to which this resource will belong
-        @param isManual Is the resource to be manually loaded? If so, you should
-            provide a value for the loader parameter
-        @param loader The manual loader which is to perform the required actions
-            when this resource is loaded; only applicable when you specify true
-            for the previous parameter
-        @param loadParams Optional pointer to a list of name/value pairs 
-            containing loading parameters for this type of resource.
-        @param backgroundThread Optional boolean which lets the load routine know if it
-            is being run on the background resource loading thread
+        @copydetails ResourceManager::prepare()
         */
         ResourcePtr load(const String& name,
             const String& group, bool isManual = false, 
@@ -551,9 +516,9 @@ namespace Ogre {
 
 
     public:
-        typedef OGRE_HashMap< String, ResourcePtr > ResourceMap;
-        typedef OGRE_HashMap< String, ResourceMap > ResourceWithGroupMap;
-        typedef map<ResourceHandle, ResourcePtr>::type ResourceHandleMap;
+        typedef std::unordered_map< String, ResourcePtr > ResourceMap;
+        typedef std::unordered_map< String, ResourceMap > ResourceWithGroupMap;
+        typedef std::map<ResourceHandle, ResourcePtr> ResourceHandleMap;
     protected:
         ResourceHandleMap mResourcesByHandle;
         ResourceMap mResources;
@@ -585,7 +550,7 @@ namespace Ogre {
         }
 
     protected:
-        typedef map<String, ResourcePool*>::type ResourcePoolMap;
+        typedef std::map<String, ResourcePool*> ResourcePoolMap;
         ResourcePoolMap mResourcePoolMap;
     };
 

@@ -27,7 +27,7 @@ THE SOFTWARE.
 */
 
 #include "OgreStableHeaders.h"
-#include "OgreScriptTranslator.h"
+#include "OgreBuiltinScriptTranslators.h"
 #include "OgreGpuProgramManager.h"
 #include "OgreHighLevelGpuProgramManager.h"
 #include "OgreParticleSystemRenderer.h"
@@ -87,18 +87,12 @@ namespace Ogre{
                                "token \"" + static_cast<ObjectAbstractNode*>(node.get())->cls + "\" is not recognized");
     }
     //-------------------------------------------------------------------------
-    AbstractNodeList::const_iterator ScriptTranslator::getNodeAt(const AbstractNodeList &nodes, int index)
+    AbstractNodeList::const_iterator ScriptTranslator::getNodeAt(const AbstractNodeList &nodes, size_t index)
     {
-        AbstractNodeList::const_iterator i = nodes.begin();
-        int n = 0;
-        while(i != nodes.end())
-        {
-            if(n == index)
-                return i;
-            ++i;
-            ++n;
-        }
-        return nodes.end();
+        if(index >= nodes.size())
+            return nodes.end();
+
+        return std::next(nodes.begin(), index);
     }
     //-------------------------------------------------------------------------
     bool ScriptTranslator::getBoolean(const AbstractNodePtr &node, bool *result)
@@ -641,6 +635,10 @@ namespace Ogre{
                         // when using this material keyword was still current.
                         LodStrategy *strategy = DistanceLodSphereStrategy::getSingletonPtr();
                         mMaterial->setLodStrategy(strategy);
+
+                        compiler->addError(ScriptCompiler::CE_INVALIDPARAMETERS, prop->file,
+                                           prop->line,
+                                           "lod_distances is deprecated. Use lod_values.");
 
                         // Read in LOD distances
                         Material::LodValueList lods;
@@ -2882,6 +2880,11 @@ namespace Ogre{
                             compiler->_fireEvent(&evt, 0);
 
                             mUnit->setCubicTextureName(evt.mName, atom1->id == ID_COMBINED_UVW);
+
+                            if(mUnit->is3D())
+                                compiler->addError(ScriptCompiler::CE_INVALIDPARAMETERS, prop->file,
+                                                   prop->line,
+                                                   "'cubic_texture .. combinedUVW' is deprecated. Use 'texture .. cubic' instead.");
                         }
                         else
                         {
@@ -4240,7 +4243,7 @@ namespace Ogre{
     //-------------------------------------------------------------------------
     void GpuProgramTranslator::translateGpuProgram(ScriptCompiler *compiler, ObjectAbstractNode *obj)
     {
-        list<std::pair<String,String> >::type customParameters;
+        std::list<std::pair<String,String> > customParameters;
         String syntax, source;
         AbstractNodePtr params;
         for(AbstractNodeList::iterator i = obj->children.begin(); i != obj->children.end(); ++i)
@@ -4343,7 +4346,7 @@ namespace Ogre{
         prog->_notifyOrigin(obj->file);
 
         // Set the custom parameters
-        for(list<std::pair<String,String> >::type::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
+        for(std::list<std::pair<String,String> >::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
             prog->setParameter(i->first, i->second);
 
         // Set up default parameters
@@ -4356,7 +4359,7 @@ namespace Ogre{
     //-------------------------------------------------------------------------
     void GpuProgramTranslator::translateUnifiedGpuProgram(ScriptCompiler *compiler, ObjectAbstractNode *obj)
     {
-        list<std::pair<String,String> >::type customParameters;
+        std::list<std::pair<String,String> > customParameters;
         AbstractNodePtr params;
         for(AbstractNodeList::iterator i = obj->children.begin(); i != obj->children.end(); ++i)
         {
@@ -4427,7 +4430,7 @@ namespace Ogre{
         prog->_notifyOrigin(obj->file);
 
         // Set the custom parameters
-        for(list<std::pair<String,String> >::type::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
+        for(std::list<std::pair<String,String> >::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
             prog->setParameter(i->first, i->second);
 
         // Set up default parameters
@@ -4453,7 +4456,7 @@ namespace Ogre{
             return;
         }
 
-        list<std::pair<String,String> >::type customParameters;
+        std::list<std::pair<String,String> > customParameters;
         String source;
         AbstractNodePtr params;
         for(AbstractNodeList::iterator i = obj->children.begin(); i != obj->children.end(); ++i)
@@ -4542,7 +4545,7 @@ namespace Ogre{
         prog->_notifyOrigin(obj->file);
 
         // Set the custom parameters
-        for(list<std::pair<String,String> >::type::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
+        for(std::list<std::pair<String,String> >::iterator i = customParameters.begin(); i != customParameters.end(); ++i)
             prog->setParameter(i->first, i->second);
 
         // Set up default parameters
@@ -6801,11 +6804,6 @@ namespace Ogre{
      *************************************************************************/
     BuiltinScriptTranslatorManager::BuiltinScriptTranslatorManager()
     {
-    }
-    //-------------------------------------------------------------------------
-    size_t BuiltinScriptTranslatorManager::getNumTranslators() const
-    {
-        return 12;
     }
     //-------------------------------------------------------------------------
     ScriptTranslator *BuiltinScriptTranslatorManager::getTranslator(const AbstractNodePtr &node)

@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include "OgreLogManager.h"
 #include "OgreImage.h"
 #include "OgreException.h"
+#include "OgreEXRCodecExports.h"
 
 #include "OgreEXRCodec.h"
 
@@ -92,23 +93,23 @@ Codec::DecodeResult EXRCodec::decode(const DataStreamPtr& input) const
         uchar *pixels = output->getPtr();
         FrameBuffer frameBuffer;
         frameBuffer.insert("R",             // name
-                    Slice (FLOAT,       // type
+                    Slice (PixelType::FLOAT,       // type
                        ((char *) pixels)+0, // base
                        4 * components,      // xStride
                     4 * components * width));    // yStride
         frameBuffer.insert("G",             // name
-                    Slice (FLOAT,       // type
+                    Slice (PixelType::FLOAT,       // type
                        ((char *) pixels)+4, // base
                        4 * components,      // xStride
                     4 * components * width));    // yStride
         frameBuffer.insert("B",             // name
-                    Slice (FLOAT,       // type
+                    Slice (PixelType::FLOAT,       // type
                        ((char *) pixels)+8, // base
                        4 * components,      // xStride
                     4 * components * width));    // yStride
         if(components==4) {
             frameBuffer.insert("A",                 // name
-                        Slice (FLOAT,           // type
+                        Slice (PixelType::FLOAT,           // type
                            ((char *) pixels)+12,        // base
                            4 * components,      // xStride
                         4 * components * width));    // yStride
@@ -163,4 +164,21 @@ String EXRCodec::magicNumberToFileExt(const char* magicNumberPtr, size_t maxbyte
   return "";
 }
 
+#ifndef OGRE_STATIC_LIB
+static Codec *mEXRCodec;
+
+extern "C" _OgreEXRPluginExport void dllStartPlugin();
+extern "C" _OgreEXRPluginExport void dllStopPlugin();
+
+extern "C" _OgreEXRPluginExport void dllStartPlugin()
+{
+    mEXRCodec = new EXRCodec;
+    Codec::registerCodec( mEXRCodec );
+}
+extern "C" _OgreEXRPluginExport void dllStopPlugin()
+{
+    Codec::unregisterCodec( mEXRCodec );
+    delete mEXRCodec;
+}
+#endif
 }

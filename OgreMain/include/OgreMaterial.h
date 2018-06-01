@@ -93,9 +93,9 @@ namespace Ogre {
 
     public:
         /// distance list used to specify LOD
-        typedef vector<Real>::type LodValueList;
+        typedef std::vector<Real> LodValueList;
         typedef ConstVectorIterator<LodValueList> LodValueIterator;
-        typedef vector<Technique*>::type Techniques;
+        typedef std::vector<Technique*> Techniques;
     protected:
 
 
@@ -107,8 +107,8 @@ namespace Ogre {
         Techniques mTechniques;
         /// Supported techniques of any sort
         Techniques mSupportedTechniques;
-        typedef map<unsigned short, Technique*>::type LodTechniques;
-        typedef map<unsigned short, LodTechniques*>::type BestTechniquesBySchemeList;
+        typedef std::map<unsigned short, Technique*> LodTechniques;
+        typedef std::map<unsigned short, LodTechniques*> BestTechniquesBySchemeList;
         /** Map of scheme -> list of LOD techniques. 
             Current scheme is set on MaterialManager,
             and can be set per Viewport for auto activation.
@@ -118,12 +118,12 @@ namespace Ogre {
         LodValueList mUserLodValues;
         LodValueList mLodValues;
         const LodStrategy *mLodStrategy;
+        /// Text description of why any techniques are not supported
+        String mUnsupportedReasons;
         bool mReceiveShadows;
         bool mTransparencyCastsShadows;
         /// Does this material require compilation?
         bool mCompilationRequired;
-        /// Text description of why any techniques are not supported
-        String mUnsupportedReasons;
 
         /** Insert a supported technique into the local collections. */
         void insertSupportedTechnique(Technique* t);
@@ -214,11 +214,11 @@ namespace Ogre {
         Technique* createTechnique(void);
         /** Gets the indexed technique.
          * @deprecated use getTechniques()  */
-        Technique* getTechnique(unsigned short index);
+        Technique* getTechnique(unsigned short index) const;
         /** searches for the named technique.
             Return 0 if technique with name is not found
         */
-        Technique* getTechnique(const String& name);
+        Technique* getTechnique(const String& name) const;
         /** Retrieves the number of techniques.
          * @deprecated use getTechniques()  */
         unsigned short getNumTechniques(void) const;

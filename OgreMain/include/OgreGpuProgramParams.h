@@ -38,6 +38,7 @@ Copyright (c) 2000-2014 Torus Knot Software Ltd
 #include "OgreHeaderPrefix.h"
 
 namespace Ogre {
+    class TransformBase;
 
     /** \addtogroup Core
      *  @{
@@ -112,11 +113,6 @@ namespace Ogre {
         GCT_BOOL2 = 45,
         GCT_BOOL3 = 46,
         GCT_BOOL4 = 47,
-        GCT_SAMPLER_WRAPPER1D = 48,
-        GCT_SAMPLER_WRAPPER2D = 49,
-        GCT_SAMPLER_WRAPPER3D = 50,
-        GCT_SAMPLER_WRAPPERCUBE = 51,
-        GCT_SAMPLER_STATE = 52, //only for hlsl 4.0
         GCT_UNKNOWN = 99
     };
 
@@ -469,7 +465,7 @@ namespace Ogre {
             , arraySize(1)
             , variability(GPV_GLOBAL) {}
     };
-    typedef map<String, GpuConstantDefinition>::type GpuConstantDefinitionMap;
+    typedef std::map<String, GpuConstantDefinition> GpuConstantDefinitionMap;
     typedef ConstMapIterator<GpuConstantDefinitionMap> GpuConstantDefinitionIterator;
 
     /// Struct collecting together the information for named constants.
@@ -567,7 +563,7 @@ namespace Ogre {
     GpuLogicalIndexUse(size_t bufIdx, size_t curSz, uint16 v)
         : physicalIndex(bufIdx), currentSize(curSz), variability(v) {}
     };
-    typedef map<size_t, GpuLogicalIndexUse>::type GpuLogicalIndexUseMap;
+    typedef std::map<size_t, GpuLogicalIndexUse> GpuLogicalIndexUseMap;
     /// Container struct to allow params to safely & update shared list of logical buffer assignments
     struct _OgreExport GpuLogicalBufferStruct : public GpuParamsAlloc
     {
@@ -584,30 +580,30 @@ namespace Ogre {
         @note Not necessarily in direct index order to constant indexes, logical
         to physical index map is derived from GpuProgram
     */
-    typedef vector<float>::type FloatConstantList;
+    typedef std::vector<float> FloatConstantList;
     /** Definition of container that holds the current double constants.
         @note Not necessarily in direct index order to constant indexes, logical
         to physical index map is derived from GpuProgram
     */
-    typedef vector<double>::type DoubleConstantList;
+    typedef std::vector<double> DoubleConstantList;
     /** Definition of container that holds the current int constants.
         @note Not necessarily in direct index order to constant indexes, logical
         to physical index map is derived from GpuProgram
     */
-    typedef vector<int>::type IntConstantList;
+    typedef std::vector<int> IntConstantList;
     /** Definition of container that holds the current uint constants.
         @note Not necessarily in direct index order to constant indexes, logical
         to physical index map is derived from GpuProgram
     */
-    typedef vector<uint>::type UnsignedIntConstantList;
+    typedef std::vector<uint> UnsignedIntConstantList;
     /** Definition of container that holds the current bool constants.
         @note Not necessarily in direct index order to constant indexes, logical
         to physical index map is derived from GpuProgram
     */
     //FIXME What is best container for bool in C++?  Apparently not vector,
     // since it stores bool as bitfield which is slow and awkward.
-    // typedef vector<bool>::type BoolConstantList;
-    // typedef deque<bool>::type BoolConstantList;
+    // typedef std::vector<bool> BoolConstantList;
+    // typedef std::deque<bool> BoolConstantList;
 
     /** A group of manually updated parameters that are shared between many parameter sets.
         @remarks
@@ -808,7 +804,7 @@ namespace Ogre {
             const GpuConstantDefinition* srcDefinition;
             const GpuConstantDefinition* dstDefinition;
         };
-        typedef vector<CopyDataEntry>::type CopyDataList;
+        typedef std::vector<CopyDataEntry> CopyDataList;
 
         CopyDataList mCopyDataList;
 
@@ -884,6 +880,9 @@ namespace Ogre {
     public:
         /** Defines the types of automatically updated values that may be bound to GpuProgram
             parameters, or used to modify parameters on a per-object basis.
+
+            For use in @ref Program-Parameter-Specification, drop the `ACT_` prefix. 
+            E.g. `ACT_WORLD_MATRIX` becomes `world_matrix`.
         */
         enum AutoConstantType
         {
@@ -1496,13 +1495,13 @@ namespace Ogre {
 
         };
         // Auto parameter storage
-        typedef vector<AutoConstantEntry>::type AutoConstantList;
+        typedef std::vector<AutoConstantEntry> AutoConstantList;
 
-        typedef vector<GpuSharedParametersUsage>::type GpuSharedParamUsageList;
+        typedef std::vector<GpuSharedParametersUsage> GpuSharedParamUsageList;
 
         // Map that store subroutines associated with slots
-        typedef OGRE_HashMap<unsigned int, String> SubroutineMap;
-        typedef OGRE_HashMap<unsigned int, String>::const_iterator SubroutineIterator;
+        typedef std::unordered_map<size_t, String> SubroutineMap;
+        typedef std::unordered_map<size_t, String>::const_iterator SubroutineIterator;
 
     protected:
         SubroutineMap mSubroutineMap;
@@ -1847,7 +1846,7 @@ namespace Ogre {
             @param m The value to set
             @param numEntries Number of Matrix4 entries
         */
-        void _writeRawConstant(size_t physicalIndex, const Matrix4* m, size_t numEntries);
+        void _writeRawConstant(size_t physicalIndex, const TransformBase* m, size_t numEntries);
         /** Write a ColourValue parameter to the program.
             @note You can use these methods if you have already derived the physical
             constant buffer location, for a slight speed improvement over using
@@ -2379,29 +2378,20 @@ namespace Ogre {
             @note Only applicable to low-level programs.
             @param logicalIndex The logical parameter index
             @param requestedSize The requested size - pass 0 to ignore missing entries
-            @param variability
             and return std::numeric_limits<size_t>::max()
+            @param variability
         */
         size_t _getFloatConstantPhysicalIndex(size_t logicalIndex, size_t requestedSize, uint16 variability);
         /** Gets the physical buffer index associated with a logical double constant index.
-            @note Only applicable to low-level programs.
-            @param logicalIndex The logical parameter index
-            @param requestedSize The requested size - pass 0 to ignore missing entries
-            and return std::numeric_limits<size_t>::max()
+            @copydetails _getFloatConstantPhysicalIndex
         */
         size_t _getDoubleConstantPhysicalIndex(size_t logicalIndex, size_t requestedSize, uint16 variability);
         /** Gets the physical buffer index associated with a logical int constant index.
-            @note Only applicable to low-level programs.
-            @param logicalIndex The logical parameter index
-            @param requestedSize The requested size - pass 0 to ignore missing entries
-            and return std::numeric_limits<size_t>::max()
+            @copydetails _getFloatConstantPhysicalIndex
         */
         size_t _getIntConstantPhysicalIndex(size_t logicalIndex, size_t requestedSize, uint16 variability);
         /** Gets the physical buffer index associated with a logical unsigned int constant index.
-            @note Only applicable to low-level programs.
-            @param logicalIndex The logical parameter index
-            @param requestedSize The requested size - pass 0 to ignore missing entries
-            and return std::numeric_limits<size_t>::max()
+            @copydetails _getFloatConstantPhysicalIndex
         */
         size_t _getUnsignedIntConstantPhysicalIndex(size_t logicalIndex, size_t requestedSize, uint16 variability);
         /* Gets the physical buffer index associated with a logical bool constant index.

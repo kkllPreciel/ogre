@@ -104,13 +104,12 @@ namespace Ogre {
             virtual ~HashFunc() {}
         };
 
-        typedef vector<TextureUnitState*>::type TextureUnitStates;
+        typedef std::vector<TextureUnitState*> TextureUnitStates;
     protected:
         Technique* mParent;
-        unsigned short mIndex; /// Pass index
         String mName; /// Optional name for the pass
         uint32 mHash; /// Pass hash
-        bool mHashDirtyQueued; /// Needs to be dirtied when next loaded
+        ushort mIndex; /// Pass index
         //-------------------------------------------------------------------------
         // Colour properties, only applicable in fixed-function passes
         ColourValue mAmbient;
@@ -128,40 +127,57 @@ namespace Ogre {
         SceneBlendFactor mSourceBlendFactorAlpha;
         SceneBlendFactor mDestBlendFactorAlpha;
 
-        // Used to determine if separate alpha blending should be used for color and alpha channels
-        bool mSeparateBlend;
-
         //-------------------------------------------------------------------------
         // Blending operations
         SceneBlendOperation mBlendOperation;
         SceneBlendOperation mAlphaBlendOperation;
 
+        /// Needs to be dirtied when next loaded
+        bool mHashDirtyQueued : 1;
+        /// Used to determine if separate alpha blending should be used for color and alpha channels
+        bool mSeparateBlend : 1;
         /// Determines if we should use separate blending operations for color and alpha channels
-        bool mSeparateBlendOperation;
-
-        //-------------------------------------------------------------------------
-
-        //-------------------------------------------------------------------------
+        bool mSeparateBlendOperation : 1;
+        /// Colour buffer settings
+        bool mColourWrite : 1;
         // Depth buffer settings
-        bool mDepthCheck;
-        bool mDepthWrite;
+        bool mDepthCheck : 1;
+        bool mDepthWrite : 1;
+        bool mAlphaToCoverageEnabled : 1;
+        /// Transparent depth sorting
+        bool mTransparentSorting : 1;
+        /// Transparent depth sorting forced
+        bool mTransparentSortingForced : 1;
+        /// Lighting enabled?
+        bool mLightingEnabled : 1;
+        /// Run this pass once per light?
+        bool mIteratePerLight : 1;
+        /// Should it only be run for a certain light type?
+        bool mRunOnlyForOneLightType : 1;
+        /// Normalisation
+        bool mNormaliseNormals : 1;
+        bool mPolygonModeOverrideable : 1;
+        bool mFogOverride : 1;
+        /// Is this pass queued for deletion?
+        bool mQueuedForDeletion : 1;
+        /// Scissoring for the light?
+        bool mLightScissoring : 1;
+        /// User clip planes for light?
+        bool mLightClipPlanes : 1;
+        bool mPointSpritesEnabled : 1;
+        bool mPointAttenuationEnabled : 1;
+        mutable bool mContentTypeLookupBuilt : 1;
+
+        uchar mAlphaRejectVal;
+
         CompareFunction mDepthFunc;
         float mDepthBiasConstant;
         float mDepthBiasSlopeScale;
         float mDepthBiasPerIteration;
 
-        /// Colour buffer settings
-        bool mColourWrite;
-
         // Alpha reject settings
         CompareFunction mAlphaRejectFunc;
-        unsigned char mAlphaRejectVal;
-        bool mAlphaToCoverageEnabled;
 
-        /// Transparent depth sorting
-        bool mTransparentSorting;
-        /// Transparent depth sorting forced
-        bool mTransparentSortingForced;
         //-------------------------------------------------------------------------
 
         //-------------------------------------------------------------------------
@@ -170,18 +186,13 @@ namespace Ogre {
         ManualCullingMode mManualCullMode;
         //-------------------------------------------------------------------------
 
-        /// Lighting enabled?
-        bool mLightingEnabled;
         /// Max simultaneous lights
         unsigned short mMaxSimultaneousLights;
         /// Starting light index
         unsigned short mStartLight;
-        /// Run this pass once per light?
-        bool mIteratePerLight;
         /// Iterate per how many lights?
         unsigned short mLightsPerIteration;
-        /// Should it only be run for a certain light type?
-        bool mRunOnlyForOneLightType;
+
         Light::LightTypes mOnlyLightType;
         /// With a specific light mask?
         uint32 mLightMask;
@@ -190,12 +201,9 @@ namespace Ogre {
         ShadeOptions mShadeOptions;
         /// Polygon mode
         PolygonMode mPolygonMode;
-        /// Normalisation
-        bool mNormaliseNormals;
-        bool mPolygonModeOverrideable;
+
         //-------------------------------------------------------------------------
         // Fog
-        bool mFogOverride;
         FogMode mFogMode;
         ColourValue mFogColour;
         Real mFogStart;
@@ -207,56 +215,33 @@ namespace Ogre {
         TextureUnitStates mTextureUnitStates;
 
         /// Vertex program details
-        GpuProgramUsage *mVertexProgramUsage;
-        /// Vertex program details
-        GpuProgramUsage *mShadowCasterVertexProgramUsage;
-        /// Fragment program details
-        GpuProgramUsage *mShadowCasterFragmentProgramUsage;
-        /// Vertex program details
-        GpuProgramUsage *mShadowReceiverVertexProgramUsage;
-        /// Fragment program details
-        GpuProgramUsage *mFragmentProgramUsage;
-        /// Fragment program details
-        GpuProgramUsage *mShadowReceiverFragmentProgramUsage;
-        /// Geometry program details
-        GpuProgramUsage *mGeometryProgramUsage;
-        /// Tessellation hull program details
-        GpuProgramUsage *mTessellationHullProgramUsage;
-        /// Tessellation domain program details
-        GpuProgramUsage *mTessellationDomainProgramUsage;
-        /// Compute program details
-        GpuProgramUsage *mComputeProgramUsage;
-        /// Is this pass queued for deletion?
-        bool mQueuedForDeletion;
+        std::unique_ptr<GpuProgramUsage> mProgramUsage[GPT_COUNT];
+        std::unique_ptr<GpuProgramUsage> mShadowCasterVertexProgramUsage;
+        std::unique_ptr<GpuProgramUsage> mShadowCasterFragmentProgramUsage;
+        std::unique_ptr<GpuProgramUsage> mShadowReceiverVertexProgramUsage;
+        std::unique_ptr<GpuProgramUsage> mShadowReceiverFragmentProgramUsage;
         /// Number of pass iterations to perform
         size_t mPassIterationCount;
         /// Point size, applies when not using per-vertex point size
         Real mPointSize;
         Real mPointMinSize;
         Real mPointMaxSize;
-        bool mPointSpritesEnabled;
-        bool mPointAttenuationEnabled;
         /// Constant, linear, quadratic coeffs
         Real mPointAttenuationCoeffs[3];
         // TU Content type lookups
-        typedef vector<unsigned short>::type ContentTypeLookup;
+        typedef std::vector<unsigned short> ContentTypeLookup;
         mutable ContentTypeLookup mShadowContentTypeLookup;
-        mutable bool mContentTypeLookupBuilt;
-        /// Scissoring for the light?
-        bool mLightScissoring;
-        /// User clip planes for light?
-        bool mLightClipPlanes;
+
         /// Illumination stage?
         IlluminationStage mIlluminationStage;
         /// User objects binding.
         UserObjectBindings      mUserObjectBindings;
 
-
         /// Used to get scene blending flags from a blending type
         void _getBlendFlags(SceneBlendType type, SceneBlendFactor& source, SceneBlendFactor& dest);
 
     public:
-        typedef set<Pass*>::type PassSet;
+        typedef std::set<Pass*> PassSet;
     protected:
         /// List of Passes whose hashes need recalculating
         static PassSet msDirtyHashList;
@@ -273,26 +258,32 @@ namespace Ogre {
         Pass(Technique* parent, unsigned short index);
         /// Copy constructor
         Pass(Technique* parent, unsigned short index, const Pass& oth );
-        /// Operator = overload
-        Pass& operator=(const Pass& oth);
+
         ~Pass();
 
+        /// Operator = overload
+        Pass& operator=(const Pass& oth);
+
         /// Returns true if this pass is programmable i.e. includes either a vertex or fragment program.
-        bool isProgrammable(void) const { return mVertexProgramUsage || mFragmentProgramUsage || mGeometryProgramUsage ||
-                                                 mTessellationHullProgramUsage || mTessellationDomainProgramUsage || mComputeProgramUsage; }
+        bool isProgrammable(void) const
+        {
+            for (const auto& u : mProgramUsage)
+                if (u) return true;
+            return false;
+        }
 
         /// Returns true if this pass uses a programmable vertex pipeline
-        bool hasVertexProgram(void) const { return mVertexProgramUsage != NULL; }
+        bool hasVertexProgram(void) const { return hasGpuProgram(GPT_VERTEX_PROGRAM); }
         /// Returns true if this pass uses a programmable fragment pipeline
-        bool hasFragmentProgram(void) const { return mFragmentProgramUsage != NULL; }
+        bool hasFragmentProgram(void) const { return hasGpuProgram(GPT_FRAGMENT_PROGRAM); }
         /// Returns true if this pass uses a programmable geometry pipeline
-        bool hasGeometryProgram(void) const { return mGeometryProgramUsage != NULL; }
+        bool hasGeometryProgram(void) const { return hasGpuProgram(GPT_GEOMETRY_PROGRAM); }
         /// Returns true if this pass uses a programmable tessellation control pipeline
-        bool hasTessellationHullProgram(void) const { return mTessellationHullProgramUsage != NULL; }
+        bool hasTessellationHullProgram(void) const { return hasGpuProgram(GPT_HULL_PROGRAM); }
         /// Returns true if this pass uses a programmable tessellation control pipeline
-        bool hasTessellationDomainProgram(void) const { return mTessellationDomainProgramUsage != NULL; }
+        bool hasTessellationDomainProgram(void) const { return hasGpuProgram(GPT_DOMAIN_PROGRAM); }
         /// Returns true if this pass uses a programmable compute pipeline
-        bool hasComputeProgram(void) const { return mComputeProgramUsage != NULL; }
+        bool hasComputeProgram(void) const { return hasGpuProgram(GPT_COMPUTE_PROGRAM); }
         /// Returns true if this pass uses a shadow caster vertex program
         bool hasShadowCasterVertexProgram(void) const { return mShadowCasterVertexProgramUsage != NULL; }
         /// Returns true if this pass uses a shadow caster fragment program
@@ -534,21 +525,15 @@ namespace Ogre {
             @note
             Throws an exception if the TextureUnitState is attached to another Pass.*/
         void addTextureUnitState(TextureUnitState* state);
-        /** Retrieves a pointer to a texture unit state so it may be modified.
-         */
-        TextureUnitState* getTextureUnitState(unsigned short index);
-        /** Retrieves the Texture Unit State matching name.
-            Returns 0 if name match is not found.
-        */
-        TextureUnitState* getTextureUnitState(const String& name);
         /** Retrieves a const pointer to a texture unit state.
          * @deprecated use getTextureUnitStates()
          */
-        const TextureUnitState* getTextureUnitState(unsigned short index) const;
+        TextureUnitState* getTextureUnitState(unsigned short index) const;
         /** Retrieves the Texture Unit State matching name.
             Returns 0 if name match is not found.
         */
-        const TextureUnitState* getTextureUnitState(const String& name) const;
+        TextureUnitState* getTextureUnitState(const String& name) const;
+
 
         /**  Retrieve the index of the Texture Unit State in the pass.
              @param
@@ -1176,22 +1161,22 @@ namespace Ogre {
         /// Gets the resource group of the ultimate parent Material
         const String& getResourceGroup(void) const;
 
-        const GpuProgramPtr getGpuProgram(GpuProgramType programType) const;
+        /// Gets the Gpu program used by this pass, only available after _load()
+        const GpuProgramPtr& getGpuProgram(GpuProgramType programType) const;
+        /// @overload
+        const GpuProgramPtr& getVertexProgram(void) const;
+        /// @overload
+        const GpuProgramPtr& getFragmentProgram(void) const;
+        /// @overload
+        const GpuProgramPtr& getGeometryProgram(void) const;
+        /// @overload
+        const GpuProgramPtr& getTessellationHullProgram(void) const;
+        /// @overload
+        const GpuProgramPtr& getTessellationDomainProgram(void) const;
+        /// @overload
+        const GpuProgramPtr& getComputeProgram(void) const;
 
         bool hasGpuProgram(GpuProgramType programType) const;
-
-        /** Sets the vertex program parameters.
-            @remarks
-            Only applicable to programmable passes, and this particular call is
-            designed for low-level programs; use the named parameter methods
-            for setting high-level program parameters.
-        */
-        void setVertexProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the vertex program parameters used by this pass. */
-        GpuProgramParametersSharedPtr getVertexProgramParameters(void) const;
-        /** Gets the vertex program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getVertexProgram(void) const;
-
 
         /** Sets the details of the vertex program to use when rendering as a
             shadow caster.
@@ -1367,9 +1352,6 @@ namespace Ogre {
             Only applicable to programmable passes, this sets the details of
             the program to use in this pass. The program will not be
             loaded until the parent Material is loaded.
-            @param name The name of the program - this must have been
-            created using GpuProgramManager by the time that this Pass
-            is loaded. If this parameter is blank, any program of the type in this pass is disabled.
             @param resetParams
             If true, this will create a fresh set of parameters from the
             new program being linked, so if you had previously set parameters
@@ -1379,7 +1361,11 @@ namespace Ogre {
             not just the names.
         */
         void setGpuProgram(GpuProgramType type, const GpuProgramPtr& prog, bool resetParams = true);
-        /// @overload
+        /** @overload
+            @param name The name of the program - this must have been
+            created using GpuProgramManager by the time that this Pass
+            is loaded. If this parameter is blank, any program of the type in this pass is disabled.
+        */
         void setGpuProgram(GpuProgramType type, const String& name, bool resetParams = true);
         /// @overload
         void setFragmentProgram(const String& name, bool resetParams = true);
@@ -1409,25 +1395,40 @@ namespace Ogre {
         /// @overload
         const String& getComputeProgramName(void) const { return getGpuProgramName(GPT_COMPUTE_PROGRAM); }
 
-        /** Sets the fragment program parameters.
+        /** Sets the Gpu program parameters.
             @remarks
-            Only applicable to programmable passes.
+            Only applicable to programmable passes, and this particular call is
+            designed for low-level programs; use the named parameter methods
+            for setting high-level program parameters.
         */
+        void setGpuProgramParameters(GpuProgramType type, const GpuProgramParametersSharedPtr& params);
+        /// @overload
+        void setVertexProgramParameters(GpuProgramParametersSharedPtr params);
+        /// @overload
         void setFragmentProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the fragment program parameters used by this pass. */
-        GpuProgramParametersSharedPtr getFragmentProgramParameters(void) const;
-        /** Gets the fragment program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getFragmentProgram(void) const;
-
-        /** Sets the geometry program parameters.
-            @remarks
-            Only applicable to programmable passes.
-        */
+        /// @overload
         void setGeometryProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the geometry program parameters used by this pass. */
+        /// @overload
+        void setTessellationHullProgramParameters(GpuProgramParametersSharedPtr params);
+        /// @overload
+        void setTessellationDomainProgramParameters(GpuProgramParametersSharedPtr params);
+        /// @overload
+        void setComputeProgramParameters(GpuProgramParametersSharedPtr params);
+
+        /** Gets the Gpu program parameters used by this pass. */
+        const GpuProgramParametersSharedPtr& getGpuProgramParameters(GpuProgramType type) const;
+        /// @overload
+        GpuProgramParametersSharedPtr getVertexProgramParameters(void) const;
+        /// @overload
+        GpuProgramParametersSharedPtr getFragmentProgramParameters(void) const;
+        /// @overload
         GpuProgramParametersSharedPtr getGeometryProgramParameters(void) const;
-        /** Gets the geometry program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getGeometryProgram(void) const;
+        /// @overload
+        GpuProgramParametersSharedPtr getTessellationHullProgramParameters(void) const;
+        /// @overload
+        GpuProgramParametersSharedPtr getTessellationDomainProgramParameters(void) const;
+        /// @overload
+        GpuProgramParametersSharedPtr getComputeProgramParameters(void) const;
 
         /** Splits this Pass to one which can be handled in the number of
             texture units specified.
@@ -1722,42 +1723,9 @@ namespace Ogre {
             @see UserObjectBindings::setUserAny.
         */
         const UserObjectBindings& getUserObjectBindings() const { return mUserObjectBindings; }
-
-        // Support for shader model 5.0, hull and domain shaders
-        /** Sets the Tessellation Hull program parameters.
-            @remarks
-            Only applicable to programmable passes.
-        */
-        void setTessellationHullProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the Tessellation Hull program parameters used by this pass. */
-        GpuProgramParametersSharedPtr getTessellationHullProgramParameters(void) const;
-        /** Gets the Tessellation Hull program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getTessellationHullProgram(void) const;
-
-        /** Sets the Tessellation Domain program parameters.
-            @remarks
-            Only applicable to programmable passes.
-        */
-        void setTessellationDomainProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the Tessellation Domain program parameters used by this pass. */
-        GpuProgramParametersSharedPtr getTessellationDomainProgramParameters(void) const;
-        /** Gets the Tessellation Domain program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getTessellationDomainProgram(void) const;
-
-        /** Sets the Tessellation Evaluation program parameters.
-            @remarks
-            Only applicable to programmable passes.
-        */
-        void setComputeProgramParameters(GpuProgramParametersSharedPtr params);
-        /** Gets the Tessellation Hull program parameters used by this pass. */
-        GpuProgramParametersSharedPtr getComputeProgramParameters(void) const;
-        /** Gets the Tessellation EHull program used by this pass, only available after _load(). */
-        const GpuProgramPtr& getComputeProgram(void) const;
-        
      protected:
-        const GpuProgramPtr& getProgram(GpuProgramUsage* const* gpuProgramUsage) const;
-        GpuProgramUsage*& getProgramUsage(GpuProgramType programType);
-        const GpuProgramUsage* getProgramUsage(GpuProgramType programType) const;
+        std::unique_ptr<GpuProgramUsage>& getProgramUsage(GpuProgramType programType);
+        const std::unique_ptr<GpuProgramUsage>& getProgramUsage(GpuProgramType programType) const;
     };
 
     /** Struct recording a pass which can be used for a specific illumination stage.
@@ -1782,7 +1750,7 @@ namespace Ogre {
         IlluminationPass() {}
     };
 
-    typedef vector<IlluminationPass*>::type IlluminationPassList;
+    typedef std::vector<IlluminationPass*> IlluminationPassList;
 
     /** @} */
     /** @} */

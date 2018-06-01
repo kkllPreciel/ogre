@@ -12,14 +12,7 @@ if (OGRE_BUILD_TESTS)
 
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Common/include)
 
-  ogre_add_component_include_dir(Bites)
-
-    set(GTEST_SHARED TRUE)
-    if(ANDROID)
-        set(GTEST_SHARED FALSE)
-    endif()
     if(APPLE AND NOT APPLE_IOS)
-        set(GTEST_SHARED FALSE)
         set(CROSS ${CROSS} -DCMAKE_CXX_FLAGS=-stdlib=libc++)
     endif()
     
@@ -34,8 +27,12 @@ if (OGRE_BUILD_TESTS)
         SOURCE_DIR ${GTEST_INSTALL_DIR}
         CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX=${GTEST_INSTALL_DIR}
-            -DBUILD_SHARED_LIBS=${GTEST_SHARED}
+            -DBUILD_SHARED_LIBS=FALSE
+            -DBUILD_GMOCK=FALSE
+            -DBUILD_GTEST=TRUE
+            -Dgtest_force_shared_crt=TRUE
             -G ${CMAKE_GENERATOR}
+            -DCMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}
             ${CROSS})
 
     # unit tests are go!
@@ -52,45 +49,28 @@ if (OGRE_BUILD_TESTS)
     endif ()
 
     if (OGRE_BUILD_COMPONENT_PAGING)
-      include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components/Paging/include)
-      ogre_add_component_include_dir(Paging)
-
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgrePaging)
-      list(APPEND HEADER_FILES Components/Paging/include/PageCoreTests.h)
-      list(APPEND SOURCE_FILES Components/Paging/src/PageCoreTests.cpp)
+      list(APPEND SOURCE_FILES Components/PageCoreTests.cpp)
     endif ()
     if (OGRE_BUILD_COMPONENT_MESHLODGENERATOR)
-      include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components/MeshLodGenerator/include)
-      ogre_add_component_include_dir(MeshLodGenerator)
-
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgreMeshLodGenerator)
-      list(APPEND HEADER_FILES Components/MeshLodGenerator/include/MeshLodTests.h)
-      list(APPEND SOURCE_FILES Components/MeshLodGenerator/src/MeshLodTests.cpp)
+      list(APPEND SOURCE_FILES Components/MeshLodTests.cpp)
     endif ()
     if (OGRE_BUILD_COMPONENT_TERRAIN)
-      include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components/Terrain/include)
-      ogre_add_component_include_dir(Terrain)
-
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgreTerrain)
-      list(APPEND HEADER_FILES Components/Terrain/include/TerrainTests.h)
-      list(APPEND SOURCE_FILES Components/Terrain/src/TerrainTests.cpp)
+      list(APPEND SOURCE_FILES Components/TerrainTests.cpp)
     endif ()
     if (OGRE_BUILD_COMPONENT_PROPERTY)
-      include_directories(${OGRE_SOURCE_DIR}/Components/Property/include)
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgreProperty)
-      list(APPEND SOURCE_FILES Components/Property/src/PropertyTests.cpp)
+      list(APPEND SOURCE_FILES Components/PropertyTests.cpp)
     endif ()
     if (OGRE_BUILD_COMPONENT_OVERLAY)
-      include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components/Overlay/include
-        ${OGRE_SOURCE_DIR}/Components/Overlay/include)
-
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgreOverlay)
     endif ()
     
     if(TEST_GLSUPPORT)
-      include_directories(${OGRE_SOURCE_DIR}/RenderSystems/GLSupport/include)
       set(OGRE_LIBRARIES ${OGRE_LIBRARIES} OgreGLSupport)
-      list(APPEND SOURCE_FILES RenderSystems/GLSupport/src/GLSLTests.cpp)
+      list(APPEND SOURCE_FILES RenderSystems/GLSupport/GLSLTests.cpp)
     endif()
     
     if(ANDROID)
@@ -105,7 +85,7 @@ if (OGRE_BUILD_TESTS)
     add_executable(Test_Ogre ${HEADER_FILES} ${SOURCE_FILES} ${RESOURCE_FILES} )
     add_dependencies(Test_Ogre googletest)
     ogre_install_target(Test_Ogre "" FALSE)
-    target_link_libraries(Test_Ogre OgreBites ${OGRE_LIBRARIES} gtest)
+    target_link_libraries(Test_Ogre OgreBites Codec_STBI ${OGRE_LIBRARIES} gtest)
     
     if(ANDROID)
         set_target_properties(Test_Ogre PROPERTIES LINK_FLAGS -pie)
@@ -165,6 +145,8 @@ if (OGRE_BUILD_TESTS)
         Plugin_OctreeZone
         Plugin_ParticleFX
         Plugin_PCZSceneManager
+        Codec_STBI
+        Codec_FreeImage
         RenderSystem_GL
         RenderSystem_GL3Plus
       )

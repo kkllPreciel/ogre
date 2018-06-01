@@ -58,7 +58,7 @@ class _OgreSampleClassExport Sample_Compositor : public SdkSample
     size_t mNumCompositorPages;
 
     //Used to unregister compositor logics and free memory
-    typedef map<String, CompositorLogic*>::type CompositorLogicMap;
+    typedef std::map<String, CompositorLogic*> CompositorLogicMap;
     CompositorLogicMap mCompositorLogics;
 
     String mDebugCompositorName;
@@ -613,6 +613,13 @@ void Sample_Compositor::createTextures(void)
         TU_DYNAMIC_WRITE_ONLY
     );
 
+    MaterialManager::getSingleton()
+        .getByName("Ogre/Compositor/Halftone", "General")
+        ->getTechnique(0)
+        ->getPass(0)
+        ->getTextureUnitState("noise")
+        ->setTexture(tex);
+
     if(tex)
     {
         HardwarePixelBufferSharedPtr ptr = tex->getBuffer(0,0);
@@ -655,6 +662,13 @@ void Sample_Compositor::createTextures(void)
         PF_L8,
         TU_DYNAMIC_WRITE_ONLY
     );
+
+    MaterialManager::getSingleton()
+        .getByName("Ogre/Compositor/Dither", "General")
+        ->getTechnique(0)
+        ->getPass(0)
+        ->getTextureUnitState("noise")
+        ->setTexture(tex2);
 
     HardwarePixelBufferSharedPtr ptr2 = tex2->getBuffer(0,0);
     ptr2->lock(HardwareBuffer::HBL_DISCARD);

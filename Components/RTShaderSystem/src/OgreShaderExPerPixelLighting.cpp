@@ -67,7 +67,7 @@ void PerPixelLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, con
     if (mLightParamsList.empty())
         return;
 
-    const Matrix4& matView = source->getViewMatrix();
+    const Affine3& matView = source->getViewMatrix();
     Light::LightTypes curLightType = Light::LT_DIRECTIONAL; 
     unsigned int curSearchLightIndex = 0;
 
@@ -109,14 +109,14 @@ void PerPixelLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, con
         case Light::LT_DIRECTIONAL:
 
             // Update light direction.
-            vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+            vParameter = matView * srcLight->getAs4DVector(true);
             curParams.mDirection->setGpuParameter(vParameter);
             break;
 
         case Light::LT_POINT:
 
             // Update light position.
-            vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+            vParameter = matView * srcLight->getAs4DVector(true);
             curParams.mPosition->setGpuParameter(vParameter);
 
             // Update light attenuation parameters.
@@ -130,17 +130,14 @@ void PerPixelLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, con
         case Light::LT_SPOTLIGHT:
             {                       
                 Vector3 vec3;
-                Matrix3 matViewIT;
-
                 
                 // Update light position.
-                vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+                vParameter = matView * srcLight->getAs4DVector(true);
                 curParams.mPosition->setGpuParameter(vParameter);
 
 
                 // Update light direction.
-                source->getInverseTransposeViewMatrix().extract3x3Matrix(matViewIT);
-                vec3 = matViewIT * srcLight->getDerivedDirection();
+                vec3 = source->getInverseTransposeViewMatrix().linear() * srcLight->getDerivedDirection();
                 vec3.normalise();
 
                 vParameter.x = -vec3.x;
@@ -215,8 +212,8 @@ bool PerPixelLighting::resolveParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool PerPixelLighting::resolveGlobalParameters(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* vsMain = vsProgram->getEntryPointFunction();
     Function* psMain = psProgram->getEntryPointFunction();
     bool hasError = false;
@@ -330,8 +327,8 @@ bool PerPixelLighting::resolveGlobalParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool PerPixelLighting::resolvePerLightParameters(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* vsMain = vsProgram->getEntryPointFunction();
     Function* psMain = psProgram->getEntryPointFunction();
     bool hasError = false;
@@ -432,8 +429,8 @@ bool PerPixelLighting::resolvePerLightParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool PerPixelLighting::resolveDependencies(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
 
     vsProgram->addDependency(FFP_LIB_COMMON);
     vsProgram->addDependency(SGX_LIB_PERPIXELLIGHTING);
@@ -447,9 +444,9 @@ bool PerPixelLighting::resolveDependencies(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool PerPixelLighting::addFunctionInvocations(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram(); 
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM); 
     Function* vsMain = vsProgram->getEntryPointFunction();  
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* psMain = psProgram->getEntryPointFunction();  
 
     // Add the global illumination functions.

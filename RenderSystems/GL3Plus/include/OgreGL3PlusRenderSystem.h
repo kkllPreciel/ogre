@@ -59,7 +59,7 @@ namespace Ogre {
         /// Rendering loop control
         bool mStopRendering;
 
-        typedef OGRE_HashMap<GLenum, GLuint>  BindBufferMap;
+        typedef std::unordered_map<GLenum, GLuint>  BindBufferMap;
 
         /// Last min & mip filtering options, so we can combine them
         FilterOptions mMinFilter;
@@ -90,7 +90,7 @@ namespace Ogre {
         /// GL support class, used for creating windows etc.
         GL3PlusSupport *mGLSupport;
 
-        typedef list<GL3PlusContext*>::type GL3PlusContextList;
+        typedef std::list<GL3PlusContext*> GL3PlusContextList;
         /// List of background thread contexts
         GL3PlusContextList mBackgroundContextList;
 
@@ -192,27 +192,6 @@ namespace Ogre {
         // -----------------------------
 
         bool areFixedFunctionLightsInViewSpace() const { return true; }
-
-        /** See
-         RenderSystem
-         */
-        void _setVertexTexture(size_t unit, const TexturePtr &tex);
-        /** See
-         RenderSystem
-         */
-        void _setGeometryTexture(size_t unit, const TexturePtr &tex);
-        /** See
-         RenderSystem
-         */
-        void _setComputeTexture(size_t unit, const TexturePtr &tex);
-        /** See
-         RenderSystem
-         */
-        void _setTesselationHullTexture(size_t unit, const TexturePtr &tex);
-        /** See
-         RenderSystem
-         */
-        void _setTesselationDomainTexture(size_t unit, const TexturePtr &tex);
 
         void _setTexture(size_t unit, bool enabled, const TexturePtr &tex);
 

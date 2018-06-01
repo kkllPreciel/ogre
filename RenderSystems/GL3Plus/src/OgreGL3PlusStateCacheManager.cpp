@@ -449,7 +449,7 @@ namespace Ogre {
     void GL3PlusStateCacheManager::setEnabled(GLenum flag, bool enabled)
     {
 #ifdef OGRE_ENABLE_STATE_CACHE
-        vector<uint32>::iterator iter = std::find(mEnableVector.begin(), mEnableVector.end(), flag);
+        auto iter = std::find(mEnableVector.begin(), mEnableVector.end(), flag);
         bool was_enabled = iter != mEnableVector.end();
 
         if(was_enabled == enabled)
@@ -551,7 +551,7 @@ namespace Ogre {
     void GL3PlusStateCacheManager::enableTextureCoordGen(GLenum type)
     {
 #ifdef OGRE_ENABLE_STATE_CACHE
-        OGRE_HashMap<GLenum, TexGenParams>::iterator it = mTextureCoordGen.find(mActiveTextureUnit);
+        std::unordered_map<GLenum, TexGenParams>::iterator it = mTextureCoordGen.find(mActiveTextureUnit);
         if (it == mTextureCoordGen.end())
         {
             OGRE_CHECK_GL_ERROR(glEnable(type));
@@ -573,7 +573,7 @@ namespace Ogre {
     void GL3PlusStateCacheManager::disableTextureCoordGen(GLenum type)
     {
 #ifdef OGRE_ENABLE_STATE_CACHE
-        OGRE_HashMap<GLenum, TexGenParams>::iterator it = mTextureCoordGen.find(mActiveTextureUnit);
+        std::unordered_map<GLenum, TexGenParams>::iterator it = mTextureCoordGen.find(mActiveTextureUnit);
         if (it != mTextureCoordGen.end())
         {
             std::set<GLenum>::iterator found = it->second.mEnabled.find(type);

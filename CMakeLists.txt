@@ -109,7 +109,7 @@ if(UNIX)
   if (EMSCRIPTEN)
       set(OGRE_WARNING_FLAGS "${OGRE_WARNING_FLAGS} -Wno-warn-absolute-paths")
   endif ()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OGRE_WARNING_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${OGRE_WARNING_FLAGS} ${CMAKE_CXX_FLAGS}")
 endif ()
 if (MSVC)
   add_definitions(-D_MT -D_USRDLL)
@@ -160,8 +160,6 @@ if (MINGW)
     # the atomic primitives
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=i686")
   endif ()
-  # Fpermissive required to let some "non-standard" casting operations in the plugins pass
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
   # disable this optimisation because it breaks release builds (reason unknown)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-tree-slp-vectorize")
   # Ignore some really annoying warnings which also happen in dependencies
@@ -248,8 +246,8 @@ elseif(EMSCRIPTEN)
   set(OGRE_BUILD_RENDERSYSTEM_GLES2 TRUE CACHE BOOL "Forcing OpenGL ES 2 RenderSystem for Emscripten" FORCE)
   set(OGRE_BUILD_RENDERSYSTEM_GL FALSE CACHE BOOL "Disable OpenGL RenderSystem for Emscripten" FORCE)
 
-  set(OGRE_CONFIG_ENABLE_STBI TRUE CACHE BOOL "Enable STBIImageCodec on Emscripten (Smaller Footprint)" FORCE)
-  set(OGRE_CONFIG_ENABLE_FREEIMAGE FALSE CACHE BOOL "Disable Freeimage on Emscripten (Smaller Footprint)" FORCE)
+  set(OGRE_BUILD_PLUGIN_STBI TRUE CACHE BOOL "Enable STBIImageCodec on Emscripten (Smaller Footprint)" FORCE)
+  set(OGRE_BUILD_PLUGIN_FREEIMAGE FALSE CACHE BOOL "Disable Freeimage on Emscripten (Smaller Footprint)" FORCE)
   set(OGRE_BUILD_PLUGIN_PCZ FALSE CACHE BOOL "Disable pcz on Emscripten" FORCE)
   set(OGRE_BUILD_PLUGIN_BSP FALSE CACHE BOOL "Disable pcz on Emscripten" FORCE)
   set(OGRE_BUILD_TOOLS FALSE CACHE BOOL "Disable tools on Emscripten" FORCE)
@@ -258,6 +256,8 @@ elseif(EMSCRIPTEN)
   set(OGRE_BUILD_COMPONENT_PAGING FALSE CACHE BOOL "Disable paging component on Emscripten" FORCE)
   set(OGRE_BUILD_COMPONENT_TERRAIN FALSE CACHE BOOL "Disable terrain component on Emscripten" FORCE)
   set(OGRE_STATIC TRUE CACHE BOOL "Forcing static build for Emscripten" FORCE)
+
+  set(OGRE_CONFIG_THREADS "0" CACHE STRING "Threading is unstable on Emscripten" FORCE)
 elseif (APPLE AND NOT APPLE_IOS)
 
   set(XCODE_ATTRIBUTE_SDKROOT macosx)
@@ -312,7 +312,15 @@ include(Dependencies)
 
 # Customise what to build
 option(OGRE_STATIC "Static build" FALSE)
-option(OGRE_RESOURCEMANAGER_STRICT "Make ResourceManager strict for faster operation. (case sensitive, indexing required etc.)" FALSE)
+option(OGRE_ENABLE_PRECOMPILED_HEADERS "Use precompiled headers to speed up build" TRUE)
+set(OGRE_RESOURCEMANAGER_STRICT "2" CACHE STRING 
+  "Make ResourceManager strict for faster operation. Possible values:
+  0 - OFF search in all groups twice - for case sensitive and insensitive lookup [DEPRECATED]
+  1 - PEDANTIC require an explicit resource group. Case sensitive lookup.
+  2 - STRICT search in default group if not specified otherwise. Case sensitive lookup.
+  ")
+set_property(CACHE OGRE_RESOURCEMANAGER_STRICT PROPERTY STRINGS 0 1 2)
+
 cmake_dependent_option(OGRE_BUILD_RENDERSYSTEM_D3D9 "Build Direct3D9 RenderSystem" TRUE "WIN32;DirectX9_FOUND;NOT WINDOWS_STORE;NOT WINDOWS_PHONE" FALSE)
 cmake_dependent_option(OGRE_BUILD_RENDERSYSTEM_D3D11 "Build Direct3D11 RenderSystem" TRUE "WIN32;DirectX11_FOUND OR WINDOWS_STORE OR WINDOWS_PHONE" FALSE)
 cmake_dependent_option(OGRE_BUILD_RENDERSYSTEM_GL3PLUS "Build OpenGL 3+ RenderSystem" TRUE "OPENGL_FOUND;NOT WINDOWS_STORE;NOT WINDOWS_PHONE" FALSE)
@@ -360,9 +368,9 @@ set(OGRE_CONFIG_THREAD_PROVIDER "std" CACHE STRING
 	std   - STL thread library (requires compiler support)."
 )
 set_property(CACHE OGRE_CONFIG_THREAD_PROVIDER PROPERTY STRINGS boost poco tbb std)
-cmake_dependent_option(OGRE_CONFIG_ENABLE_FREEIMAGE "Build FreeImage codec." FALSE "FreeImage_FOUND" FALSE)
-cmake_dependent_option(OGRE_BUILD_PLUGIN_EXRCODEC "Build EXR Codec plugin" TRUE "OPENEXR_FOUND;NOT OGRE_CONFIG_ENABLE_FREEIMAGE" FALSE)
-cmake_dependent_option(OGRE_CONFIG_ENABLE_STBI "Enable STBI image codec." TRUE "NOT OGRE_CONFIG_ENABLE_FREEIMAGE" FALSE)
+cmake_dependent_option(OGRE_BUILD_PLUGIN_FREEIMAGE "Build FreeImage codec." TRUE "FreeImage_FOUND" FALSE)
+cmake_dependent_option(OGRE_BUILD_PLUGIN_EXRCODEC "Build EXR Codec plugin" TRUE "OPENEXR_FOUND;" FALSE)
+option(OGRE_BUILD_PLUGIN_STBI "Enable STBI image codec." TRUE)
 option(OGRE_CONFIG_ENABLE_MESHLOD "Enable Mesh Lod." TRUE)
 option(OGRE_CONFIG_ENABLE_DDS "Build DDS codec." TRUE)
 option(OGRE_CONFIG_ENABLE_PVRTC "Build PVRTC codec." FALSE)
@@ -412,10 +420,8 @@ mark_as_advanced(
   OGRE_CONFIG_NODE_INHERIT_TRANSFORM
   OGRE_CONFIG_ENABLE_MESHLOD
   OGRE_CONFIG_ENABLE_DDS
-  OGRE_CONFIG_ENABLE_FREEIMAGE
   OGRE_CONFIG_ENABLE_PVRTC
   OGRE_CONFIG_ENABLE_ETC
-  OGRE_CONFIG_ENABLE_STBI
   OGRE_CONFIG_ENABLE_ASTC
   OGRE_CONFIG_ENABLE_VIEWPORT_ORIENTATIONMODE
   OGRE_CONFIG_ENABLE_ZIP

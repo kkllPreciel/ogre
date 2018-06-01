@@ -250,7 +250,6 @@ namespace Ogre {
         rsc->parseVendorFromString(mGLSupport->getGLVendor());
 
         // Check for hardware mipmapping support.
-        rsc->setCapability(RSC_AUTOMIPMAP);
         rsc->setCapability(RSC_AUTOMIPMAP_COMPRESSED);
 
         // Multitexturing support and set number of texture units
@@ -383,18 +382,10 @@ namespace Ogre {
 
         // Support for specific shader profiles
         bool limitedOSXCoreProfile = OGRE_PLATFORM == OGRE_PLATFORM_APPLE && hasMinGLVersion(3, 2);
-        if (getNativeShadingLanguageVersion() >= 450)
-            rsc->addShaderProfile("glsl450");
-        if (getNativeShadingLanguageVersion() >= 440)
-            rsc->addShaderProfile("glsl440");
-        if (getNativeShadingLanguageVersion() >= 430)
-            rsc->addShaderProfile("glsl430");
-        if (getNativeShadingLanguageVersion() >= 420)
-            rsc->addShaderProfile("glsl420");
-        if (getNativeShadingLanguageVersion() >= 410)
-            rsc->addShaderProfile("glsl410");
-        if (getNativeShadingLanguageVersion() >= 400)
-            rsc->addShaderProfile("glsl400");
+
+        for (uint16 ver = getNativeShadingLanguageVersion(); ver >= 400; ver -= 10)
+            rsc->addShaderProfile("glsl" + StringConverter::toString(ver));
+
         if (getNativeShadingLanguageVersion() >= 330)
             rsc->addShaderProfile("glsl330");
         if (getNativeShadingLanguageVersion() >= 150)
@@ -524,6 +515,9 @@ namespace Ogre {
         if (hasMinGLVersion(4, 3) || checkExtension("GL_KHR_debug"))
             rsc->setCapability(RSC_DEBUG);
 
+        if( hasMinGLVersion(4, 3) || checkExtension("GL_ARB_ES3_compatibility"))
+            rsc->setCapability(RSC_PRIMITIVE_RESTART);
+
         return rsc;
     }
 
@@ -559,12 +553,6 @@ namespace Ogre {
 
         // Create the texture manager
         mTextureManager = new GL3PlusTextureManager(this);
-
-        if (caps->hasCapability(RSC_CAN_GET_COMPILED_SHADER_BUFFER))
-        {
-            // Enable microcache
-            mShaderManager->setSaveMicrocodesToCache(true);
-        }
 
         mGLInitialised = true;
     }
@@ -855,31 +843,6 @@ namespace Ogre {
         }
 
         mStateCacheManager->activateGLTextureUnit(0);
-    }
-
-    void GL3PlusRenderSystem::_setVertexTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-
-    void GL3PlusRenderSystem::_setGeometryTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-
-    void GL3PlusRenderSystem::_setComputeTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-
-    void GL3PlusRenderSystem::_setTesselationHullTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-
-    void GL3PlusRenderSystem::_setTesselationDomainTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
     }
 
     void GL3PlusRenderSystem::_setTextureCoordSet(size_t stage, size_t index)
@@ -1451,7 +1414,7 @@ namespace Ogre {
         VertexDeclaration* globalVertexDeclaration = getGlobalInstanceVertexBufferVertexDeclaration();
         bool hasInstanceData = (op.useGlobalInstancingVertexBufferIsAvailable &&
                                 globalInstanceVertexBuffer && globalVertexDeclaration) ||
-                               op.vertexData->vertexBufferBinding->getHasInstanceData();
+                               op.vertexData->vertexBufferBinding->hasInstanceData();
 
         size_t numberOfInstances = op.numberOfInstances;
 
@@ -1979,6 +1942,11 @@ namespace Ogre {
 #endif
         }
 
+        if(getCapabilities()->hasCapability(RSC_PRIMITIVE_RESTART))
+        {
+            OGRE_CHECK_GL_ERROR(glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX));
+        }
+
         glEnable(GL_PROGRAM_POINT_SIZE);
 
         if(getCapabilities()->getVendor() == GPU_NVIDIA)
@@ -2459,7 +2427,7 @@ namespace Ogre {
         mStateCacheManager->bindGLBuffer(GL_ARRAY_BUFFER, hwGlBuffer->getGLBufferId());
         void* pBufferData = GL_BUFFER_OFFSET(elem.getOffset() + vertexStart * vertexBuffer->getVertexSize());
 
-        if (hwGlBuffer->getIsInstanceData())
+        if (hwGlBuffer->isInstanceData())
         {
             OGRE_CHECK_GL_ERROR(glVertexAttribDivisor(attrib, hwGlBuffer->getInstanceDataStepRate()));
         }

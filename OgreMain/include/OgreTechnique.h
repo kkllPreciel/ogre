@@ -51,7 +51,7 @@ namespace Ogre {
     class _OgreExport Technique : public TechniqueAlloc
     {
     public:
-        typedef vector<Pass*>::type Passes;
+        typedef std::vector<Pass*> Passes;
 
     protected:
         /// Illumination pass state type
@@ -68,7 +68,6 @@ namespace Ogre {
         IlluminationPassList mIlluminationPasses;
         // Raw pointer since we don't want child to stop parent's destruction
         Material* mParent;
-        bool mIsSupported;
         IlluminationPassesState mIlluminationPassesCompilationPhase;
         /// LOD level
         unsigned short mLodIndex;
@@ -78,7 +77,6 @@ namespace Ogre {
         unsigned short mSchemeIndex;
         /// Optional name for the technique
         String mName;
-
         /// Internal method for clearing illumination pass list
         void clearIlluminationPasses(void);
         /// Internal method - check for manually assigned illumination passes
@@ -109,6 +107,7 @@ namespace Ogre {
         // User objects binding.
         UserObjectBindings  mUserObjectBindings;
 
+        bool mIsSupported;
     public:
         /** Directive used to manually control technique support based on the
             inclusion or exclusion of some factor.
@@ -141,8 +140,8 @@ namespace Ogre {
             GPUDeviceNameRule(const String& pattern, IncludeOrExclude ie, bool caseSen)
                 : devicePattern(pattern), includeOrExclude(ie), caseSensitive(caseSen) {}
         };
-        typedef vector<GPUVendorRule>::type GPUVendorRuleList;
-        typedef vector<GPUDeviceNameRule>::type GPUDeviceNameRuleList;
+        typedef std::vector<GPUVendorRule> GPUVendorRuleList;
+        typedef std::vector<GPUDeviceNameRule> GPUDeviceNameRuleList;
     protected:
         GPUVendorRuleList mGPUVendorRules;
         GPUDeviceNameRuleList mGPUDeviceNameRules;
@@ -183,11 +182,11 @@ namespace Ogre {
         Pass* createPass(void);
         /** Retrieves the Pass with the given index.
          * @deprecated use getPasses() */
-        Pass* getPass(unsigned short index);
+        Pass* getPass(unsigned short index) const;
         /** Retrieves the Pass matching name.
             Returns 0 if name match is not found.
         */
-        Pass* getPass(const String& name);
+        Pass* getPass(const String& name) const;
         /** Retrieves the number of passes.
          * @deprecated use getPasses() */
         unsigned short getNumPasses(void) const;

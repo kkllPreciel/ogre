@@ -65,7 +65,7 @@ extern "C" void glFlushRenderAPPLE();
 #endif
 
 // Convenience macro from ARB_vertex_buffer_object spec
-#define VBO_BUFFER_OFFSET(i) ((char *)NULL + (i))
+#define VBO_BUFFER_OFFSET(i) ((char *)(i))
 
 namespace Ogre {
 
@@ -244,8 +244,6 @@ namespace Ogre {
         // Supports fixed-function
         rsc->setCapability(RSC_FIXED_FUNCTION);
 
-
-        rsc->setCapability(RSC_AUTOMIPMAP);
         rsc->setCapability(RSC_AUTOMIPMAP_COMPRESSED);
 
         // Check for Multitexturing support and set number of texture units
@@ -632,11 +630,6 @@ namespace Ogre {
         // GPU Program Manager setup
         mGpuProgramManager = new GLGpuProgramManager();
 
-        if(caps->hasCapability(RSC_CAN_GET_COMPILED_SHADER_BUFFER))
-        {
-            mGpuProgramManager->setSaveMicrocodesToCache(true);
-        }
-
         if(caps->hasCapability(RSC_VERTEX_PROGRAM))
         {
             if(caps->isShaderProfileSupported("arbvp1"))
@@ -792,8 +785,6 @@ namespace Ogre {
             // Create FBO manager
             LogManager::getSingleton().logMessage("GL: Using GL_EXT_framebuffer_object for rendering to textures (best)");
             mRTTManager = new GLFBOManager(false);
-            caps->setCapability(RSC_RTT_SEPARATE_DEPTHBUFFER);
-
             //TODO: Check if we're using OpenGL 3.0 and add RSC_RTT_DEPTHBUFFER_RESOLUTION_LESSEQUAL flag
         }
         else
@@ -1468,31 +1459,6 @@ namespace Ogre {
         }
 
         mStateCacheManager->activateGLTextureUnit(0);
-    }
-    //-----------------------------------------------------------------------------
-    void GLRenderSystem::_setVertexTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-    //-----------------------------------------------------------------------------
-    void GLRenderSystem::_setGeometryTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-    //-----------------------------------------------------------------------------
-    void GLRenderSystem::_setComputeTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-    //-----------------------------------------------------------------------------
-    void GLRenderSystem::_setTesselationHullTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
-    }
-    //-----------------------------------------------------------------------------
-    void GLRenderSystem::_setTesselationDomainTexture( size_t unit, const TexturePtr &tex )
-    {
-        _setTexture(unit, true, tex);
     }
     //-----------------------------------------------------------------------------
     void GLRenderSystem::_setTextureCoordSet(size_t stage, size_t index)
@@ -2612,7 +2578,7 @@ namespace Ogre {
         VertexDeclaration* globalVertexDeclaration = getGlobalInstanceVertexBufferVertexDeclaration();
         bool hasInstanceData = (op.useGlobalInstancingVertexBufferIsAvailable &&
                                 globalInstanceVertexBuffer && globalVertexDeclaration != NULL) ||
-                                op.vertexData->vertexBufferBinding->getHasInstanceData();
+                                op.vertexData->vertexBufferBinding->hasInstanceData();
 
         size_t numberOfInstances = op.numberOfInstances;
 
@@ -2761,13 +2727,13 @@ namespace Ogre {
             glDisableClientState( GL_SECONDARY_COLOR_ARRAY );
         }
         // unbind any custom attributes
-        for (vector<GLuint>::type::iterator ai = mRenderAttribsBound.begin(); ai != mRenderAttribsBound.end(); ++ai)
+        for (std::vector<GLuint>::iterator ai = mRenderAttribsBound.begin(); ai != mRenderAttribsBound.end(); ++ai)
         {
             glDisableVertexAttribArrayARB(*ai);
         }
 
         // unbind any instance attributes
-        for (vector<GLuint>::type::iterator ai = mRenderInstanceAttribsBound.begin(); ai != mRenderInstanceAttribsBound.end(); ++ai)
+        for (std::vector<GLuint>::iterator ai = mRenderInstanceAttribsBound.begin(); ai != mRenderInstanceAttribsBound.end(); ++ai)
         {
             glVertexAttribDivisorARB(*ai, 0);
         }
@@ -3379,7 +3345,7 @@ namespace Ogre {
         {
             isCustomAttrib = mCurrentVertexProgram->isAttributeValid(sem, elem.getIndex());
 
-            if (hwGlBuffer->getIsInstanceData())
+            if (hwGlBuffer->isInstanceData())
             {
                 GLint attrib = GLSLProgramCommon::getFixedAttributeIndex(sem, elem.getIndex());
                 glVertexAttribDivisorARB(attrib, hwGlBuffer->getInstanceDataStepRate() );

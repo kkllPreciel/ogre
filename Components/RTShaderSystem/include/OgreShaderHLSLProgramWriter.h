@@ -99,16 +99,13 @@ protected:
     void writeAtomInstance(std::ostream& os, FunctionAtom* atom);   
 
 protected:
-    typedef map<GpuConstantType, const char*>::type     GpuConstTypeToStringMap;
-    typedef map<Parameter::Semantic, const char*>::type ParamSemanticToStringMap;
+    typedef std::map<GpuConstantType, const char*>     GpuConstTypeToStringMap;
+    typedef std::map<Parameter::Semantic, const char*> ParamSemanticToStringMap;
 
     // Attributes.
 protected:
     // Map between GPU constant type to string value.
     GpuConstTypeToStringMap mGpuConstTypeMap;
-    // Map between GPU constant type v4 to string value.
-    //TODO : add abstraction per version
-    GpuConstTypeToStringMap mGpuConstTypeMapV4;
     // Map between parameter semantic to string value.
     ParamSemanticToStringMap mParamSemanticMap;
 };

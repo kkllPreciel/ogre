@@ -451,7 +451,7 @@ namespace Ogre {
         return (unsigned short)mBoneList.size();
     }
     //-----------------------------------------------------------------------
-    void Skeleton::_getBoneMatrices(Matrix4* pMatrices)
+    void Skeleton::_getBoneMatrices(Affine3* pMatrices)
     {
         // Update derived transforms
         _updateTransforms();
@@ -855,7 +855,7 @@ namespace Ogre {
         //
 
         // Calculate delta-transforms for all source bones.
-        vector<DeltaTransform>::type deltaTransforms(numSrcBones);
+        std::vector<DeltaTransform> deltaTransforms(numSrcBones);
         for (handle = 0; handle < numSrcBones; ++handle)
         {
             const Bone* srcBone = src->getBone(handle);

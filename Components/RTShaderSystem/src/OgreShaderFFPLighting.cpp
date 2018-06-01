@@ -66,7 +66,7 @@ void FFPLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, const Au
 	if (mLightParamsList.empty())
 		return;
 
-	const Matrix4& matView = source->getViewMatrix();
+	const Affine3& matView = source->getViewMatrix();
 	Light::LightTypes curLightType = Light::LT_DIRECTIONAL; 
 	unsigned int curSearchLightIndex = 0;
 
@@ -108,14 +108,14 @@ void FFPLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, const Au
 		case Light::LT_DIRECTIONAL:
 
 			// Update light direction.
-			vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+			vParameter = matView * srcLight->getAs4DVector(true);
 			curParams.mDirection->setGpuParameter(vParameter);
 			break;
 
 		case Light::LT_POINT:
 
 			// Update light position.
-			vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+			vParameter = matView * srcLight->getAs4DVector(true);
 			curParams.mPosition->setGpuParameter(vParameter);
 
 			// Update light attenuation parameters.
@@ -129,17 +129,13 @@ void FFPLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, const Au
 		case Light::LT_SPOTLIGHT:
 		{						
 			Vector3 vec3;
-			Matrix3 matViewIT;
-
-			source->getInverseTransposeViewMatrix().extract3x3Matrix(matViewIT);
-
 			
 			// Update light position.
-			vParameter = matView.transformAffine(srcLight->getAs4DVector(true));
+			vParameter = matView * srcLight->getAs4DVector(true);
 			curParams.mPosition->setGpuParameter(vParameter);
 			
 							
-			vec3 = matViewIT * srcLight->getDerivedDirection();
+			vec3 = source->getInverseTransposeViewMatrix().linear() * srcLight->getDerivedDirection();
 			vec3.normalise();
 
 			vParameter.x = -vec3.x;
@@ -202,7 +198,7 @@ void FFPLighting::updateGpuProgramsParams(Renderable* rend, Pass* pass, const Au
 //-----------------------------------------------------------------------
 bool FFPLighting::resolveParameters(ProgramSet* programSet)
 {
-	Program* vsProgram = programSet->getCpuVertexProgram();
+	Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
 	Function* vsMain = vsProgram->getEntryPointFunction();
 	bool hasError = false;
 
@@ -367,7 +363,7 @@ bool FFPLighting::resolveParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool FFPLighting::resolveDependencies(ProgramSet* programSet)
 {
-	Program* vsProgram = programSet->getCpuVertexProgram();
+	Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
 
 	vsProgram->addDependency(FFP_LIB_COMMON);
 	vsProgram->addDependency(FFP_LIB_LIGHTING);
@@ -378,7 +374,7 @@ bool FFPLighting::resolveDependencies(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool FFPLighting::addFunctionInvocations(ProgramSet* programSet)
 {
-	Program* vsProgram = programSet->getCpuVertexProgram();	
+	Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);	
 	Function* vsMain = vsProgram->getEntryPointFunction();	
 
 	// Add the global illumination functions.

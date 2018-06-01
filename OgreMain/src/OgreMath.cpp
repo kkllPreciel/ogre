@@ -324,10 +324,10 @@ namespace Ogre
     }
     //-----------------------------------------------------------------------
     std::pair<bool, Real> Math::intersects(const Ray& ray, 
-        const vector<Plane>::type& planes, bool normalIsOutside)
+        const std::vector<Plane>& planes, bool normalIsOutside)
     {
-        list<Plane>::type planesList;
-        for (vector<Plane>::type::const_iterator i = planes.begin(); i != planes.end(); ++i)
+        std::list<Plane> planesList;
+        for (std::vector<Plane>::const_iterator i = planes.begin(); i != planes.end(); ++i)
         {
             planesList.push_back(*i);
         }
@@ -335,9 +335,9 @@ namespace Ogre
     }
     //-----------------------------------------------------------------------
     std::pair<bool, Real> Math::intersects(const Ray& ray, 
-        const list<Plane>::type& planes, bool normalIsOutside)
+        const std::list<Plane>& planes, bool normalIsOutside)
     {
-        list<Plane>::type::const_iterator planeit, planeitend;
+        std::list<Plane>::const_iterator planeit, planeitend;
         planeitend = planes.end();
         bool allInside = true;
         std::pair<bool, Real> ret;
@@ -844,13 +844,12 @@ namespace Ogre
 
     }
     //-----------------------------------------------------------------------
-    Matrix4 Math::buildReflectionMatrix(const Plane& p)
+    Affine3 Math::buildReflectionMatrix(const Plane& p)
     {
-        return Matrix4(
+        return Affine3(
             -2 * p.normal.x * p.normal.x + 1,   -2 * p.normal.x * p.normal.y,       -2 * p.normal.x * p.normal.z,       -2 * p.normal.x * p.d, 
             -2 * p.normal.y * p.normal.x,       -2 * p.normal.y * p.normal.y + 1,   -2 * p.normal.y * p.normal.z,       -2 * p.normal.y * p.d, 
-            -2 * p.normal.z * p.normal.x,       -2 * p.normal.z * p.normal.y,       -2 * p.normal.z * p.normal.z + 1,   -2 * p.normal.z * p.d, 
-            0,                                  0,                                  0,                                  1);
+            -2 * p.normal.z * p.normal.x,       -2 * p.normal.z * p.normal.y,       -2 * p.normal.z * p.normal.z + 1,   -2 * p.normal.z * p.d);
     }
     //-----------------------------------------------------------------------
     Vector4 Math::calculateFaceNormal(const Vector3& v1, const Vector3& v2, const Vector3& v3)
@@ -890,10 +889,10 @@ namespace Ogre
 
     }
     //---------------------------------------------------------------------
-    Matrix4 Math::makeViewMatrix(const Vector3& position, const Quaternion& orientation, 
-        const Matrix4* reflectMatrix)
+    Affine3 Math::makeViewMatrix(const Vector3& position, const Quaternion& orientation,
+        const Affine3* reflectMatrix)
     {
-        Matrix4 viewMatrix;
+        Affine3 viewMatrix;
 
         // View matrix is:
         //
@@ -913,7 +912,7 @@ namespace Ogre
         Vector3 trans = -rotT * position;
 
         // Make final matrix
-        viewMatrix = Matrix4::IDENTITY;
+        viewMatrix = Affine3::IDENTITY;
         viewMatrix = rotT; // fills upper 3x3
         viewMatrix[0][3] = trans.x;
         viewMatrix[1][3] = trans.y;

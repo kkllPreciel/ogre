@@ -32,7 +32,7 @@ THE SOFTWARE.
 namespace Ogre {
     //-----------------------------------------------------------------------------
     Technique::Technique(Material* parent)
-        : mParent(parent), mIsSupported(false), mIlluminationPassesCompilationPhase(IPS_NOT_COMPILED), mLodIndex(0), mSchemeIndex(0)
+        : mParent(parent), mIlluminationPassesCompilationPhase(IPS_NOT_COMPILED), mLodIndex(0), mSchemeIndex(0), mIsSupported(false)
     {
         // See above, defaults to unsupported until examined
     }
@@ -316,16 +316,16 @@ namespace Ogre {
         return newPass;
     }
     //-----------------------------------------------------------------------------
-    Pass* Technique::getPass(unsigned short index)
+    Pass* Technique::getPass(unsigned short index) const
     {
         assert(index < mPasses.size() && "Index out of bounds");
         return mPasses[index];
     }
     //-----------------------------------------------------------------------------
-    Pass* Technique::getPass(const String& name)
+    Pass* Technique::getPass(const String& name) const
     {
-        Passes::iterator i    = mPasses.begin();
-        Passes::iterator iend = mPasses.end();
+        Passes::const_iterator i    = mPasses.begin();
+        Passes::const_iterator iend = mPasses.end();
         Pass* foundPass = 0;
 
         // iterate through techniques to find a match

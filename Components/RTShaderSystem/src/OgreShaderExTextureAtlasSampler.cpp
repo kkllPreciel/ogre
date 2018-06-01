@@ -81,8 +81,8 @@ int TextureAtlasSampler::getExecutionOrder() const
 //-----------------------------------------------------------------------
 bool TextureAtlasSampler::resolveParameters(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* vsMain   = vsProgram->getEntryPointFunction();
     Function* psMain   = psProgram->getEntryPointFunction();    
 
@@ -120,8 +120,8 @@ bool TextureAtlasSampler::resolveParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool TextureAtlasSampler::resolveDependencies(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     vsProgram->addDependency(FFP_LIB_COMMON);
     psProgram->addDependency(SGX_LIB_TEXTURE_ATLAS);
 
@@ -131,9 +131,9 @@ bool TextureAtlasSampler::resolveDependencies(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool TextureAtlasSampler::addFunctionInvocations(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
     Function* vsMain   = vsProgram->getEntryPointFunction();    
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* psMain   = psProgram->getEntryPointFunction();    
     FunctionInvocation* curFuncInvocation = NULL;   
 
@@ -183,9 +183,6 @@ bool TextureAtlasSampler::addFunctionInvocations(ProgramSet* programSet)
             ParameterPtr texcoord = psMain->getParameterByContent(inpParams, (Parameter::Content)(Parameter::SPC_TEXTURE_COORDINATE0 + j), GCT_FLOAT2);
             ParameterPtr texel = psMain->getParameterByName(localParams, c_ParamTexel + Ogre::StringConverter::toString(j));
             UniformParameterPtr sampler = psProgram->getParameterByType(GCT_SAMPLER2D, j);
-            UniformParameterPtr samplerState;
-            if (Ogre::RTShader::ShaderGenerator::getSingletonPtr()->IsHlsl4())
-                samplerState = psProgram->getParameterByType(GCT_SAMPLER_STATE, j);
                 
             const char* addressUFuncName = getAdressingFunctionName(mTextureAddressings[j].u);
             const char* addressVFuncName = getAdressingFunctionName(mTextureAddressings[j].v);
@@ -205,18 +202,10 @@ bool TextureAtlasSampler::addFunctionInvocations(ProgramSet* programSet)
                 curFuncInvocation->pushOperand(psAtlasTextureCoord, Operand::OPS_OUT, Operand::OPM_Y);
                 psMain->addAtomInstance(curFuncInvocation);
 
-                bool isHLSL = Ogre::RTShader::ShaderGenerator::getSingleton().getTargetLanguage() == "hlsl";
-                
-                if (isHLSL)
-                    FFPTexturing::AddTextureSampleWrapperInvocation(sampler,samplerState,GCT_SAMPLER2D,psMain,groupOrder);
-
                 //sample the texel color
                 curFuncInvocation = OGRE_NEW FunctionInvocation(
                     mAutoAdjustPollPosition ? SGX_FUNC_ATLAS_SAMPLE_AUTO_ADJUST : SGX_FUNC_ATLAS_SAMPLE_NORMAL, groupOrder);
-                if (isHLSL)
-					curFuncInvocation->pushOperand(FFPTexturing::GetSamplerWrapperParam(sampler, psMain), Operand::OPS_IN);
-                else
-                    curFuncInvocation->pushOperand(sampler, Operand::OPS_IN);
+                curFuncInvocation->pushOperand(sampler, Operand::OPS_IN);
                 curFuncInvocation->pushOperand(texcoord, Operand::OPS_IN, Operand::OPM_XY);
                 curFuncInvocation->pushOperand(psAtlasTextureCoord, Operand::OPS_IN);
                 curFuncInvocation->pushOperand(mPSInpTextureDatas[j], Operand::OPS_IN);
@@ -281,7 +270,7 @@ void TextureAtlasSampler::updateGpuProgramsParams(Renderable* rend, Pass* pass, 
                 //Update the information of which texture exist where in the atlas
                 //
                 GpuProgramParametersSharedPtr vsGpuParams = pass->getVertexProgramParameters();
-                vector<float>::type buffer(mAtlasTableDatas[j]->size() * 4);
+                std::vector<float> buffer(mAtlasTableDatas[j]->size() * 4);
                 for(size_t i = 0 ; i < mAtlasTableDatas[j]->size() ; ++i)
                 {
                     buffer[i*4] = (*(mAtlasTableDatas[j]))[i].posU;
@@ -420,7 +409,7 @@ bool TextureAtlasSamplerFactory::addTexutreAtlasDefinition( DataStreamPtr stream
             if ((nonWhiteSpacePos != String::npos) && (line[nonWhiteSpacePos] != '#'))
             {
                 //parse the line
-                vector<String>::type strings = StringUtil::split(line, ",\t");
+                std::vector<String> strings = StringUtil::split(line, ",\t");
                 
                 if (strings.size() > 8)
                 {

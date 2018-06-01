@@ -66,7 +66,7 @@ namespace Ogre
         /**
         * Get the address of a function
         */
-        void* getProcAddress(const char* procname);
+        void* getProcAddress(const char* procname) const;
 
         /**
          * Initialise extensions
@@ -79,9 +79,9 @@ namespace Ogre
         virtual unsigned int getDisplayMonitorCount() const;
     private:
         // Allowed video modes
-        vector<DEVMODE>::type mDevModes;
+        std::vector<DEVMODE> mDevModes;
         Win32Window *mInitialWindow;
-        vector<int>::type mFSAALevels;
+        std::vector<int> mFSAALevels;
         bool mHasPixelFormatARB;
         bool mHasMultisample;
         bool mHasHardwareGamma;
@@ -93,7 +93,7 @@ namespace Ogre
             MONITORINFOEX   monitorInfoEx;
         };
 
-        typedef vector<DisplayMonitorInfo>::type DisplayMonitorInfoList;
+        typedef std::vector<DisplayMonitorInfo> DisplayMonitorInfoList;
         typedef DisplayMonitorInfoList::iterator DisplayMonitorInfoIterator;
 
         DisplayMonitorInfoList mMonitorInfoList;

@@ -38,54 +38,29 @@ namespace Ogre {
     uint32 MovableObject::msDefaultQueryFlags = 0xFFFFFFFF;
     uint32 MovableObject::msDefaultVisibilityFlags = 0xFFFFFFFF;
     //-----------------------------------------------------------------------
-    MovableObject::MovableObject()
-        : mCreator(0)
-        , mManager(0)
-        , mParentNode(0)
-        , mParentIsTagPoint(false)
-        , mVisible(true)
-        , mDebugDisplay(false)
-        , mUpperDistance(0)
-        , mSquaredUpperDistance(0)
-        , mMinPixelSize(0)
-        , mBeyondFarDistance(false)
-        , mRenderQueueID(RENDER_QUEUE_MAIN)
-        , mRenderQueueIDSet(false)
-        , mRenderQueuePriority(OGRE_RENDERABLE_DEFAULT_PRIORITY)
-        , mRenderQueuePrioritySet(false)
-        , mQueryFlags(msDefaultQueryFlags)
-        , mVisibilityFlags(msDefaultVisibilityFlags)
-        , mCastShadows(true)
-        , mRenderingDisabled(false)
-        , mListener(0)
-        , mLightListUpdated(0)
-        , mLightMask(0xFFFFFFFF)
-    {
-        if (Root::getSingletonPtr())
-            mMinPixelSize = Root::getSingleton().getDefaultMinPixelSize();
-    }
+    MovableObject::MovableObject() : MovableObject(BLANKSTRING) {}
     //-----------------------------------------------------------------------
     MovableObject::MovableObject(const String& name)
         : mName(name)
         , mCreator(0)
         , mManager(0)
         , mParentNode(0)
+        , mListener(0)
         , mParentIsTagPoint(false)
         , mVisible(true)
         , mDebugDisplay(false)
+        , mBeyondFarDistance(false)
+        , mCastShadows(true)
+        , mRenderQueueIDSet(false)
+        , mRenderQueuePrioritySet(false)
+        , mRenderingDisabled(false)
+        , mRenderQueueID(RENDER_QUEUE_MAIN)
+        , mRenderQueuePriority(100)
         , mUpperDistance(0)
         , mSquaredUpperDistance(0)
         , mMinPixelSize(0)
-        , mBeyondFarDistance(false)
-        , mRenderQueueID(RENDER_QUEUE_MAIN)
-        , mRenderQueueIDSet(false)
-        , mRenderQueuePriority(100)
-        , mRenderQueuePrioritySet(false)
         , mQueryFlags(msDefaultQueryFlags)
         , mVisibilityFlags(msDefaultVisibilityFlags)
-        , mCastShadows(true)
-        , mRenderingDisabled(false)
-        , mListener(0)
         , mLightListUpdated(0)
         , mLightMask(0xFFFFFFFF)
     {
@@ -306,7 +281,7 @@ namespace Ogre {
     }
 
     //-----------------------------------------------------------------------
-    const Matrix4& MovableObject::_getParentNodeFullTransform(void) const
+    const Affine3& MovableObject::_getParentNodeFullTransform(void) const
     {
         
         if(mParentNode)
@@ -315,7 +290,7 @@ namespace Ogre {
             return mParentNode->_getFullTransform();
         }
         // fallback
-        return Matrix4::IDENTITY;
+        return Affine3::IDENTITY;
     }
     //-----------------------------------------------------------------------
     const AxisAlignedBox& MovableObject::getWorldBoundingBox(bool derive) const
@@ -323,7 +298,7 @@ namespace Ogre {
         if (derive)
         {
             mWorldAABB = this->getBoundingBox();
-            mWorldAABB.transformAffine(_getParentNodeFullTransform());
+            mWorldAABB.transform(_getParentNodeFullTransform());
         }
 
         return mWorldAABB;

@@ -199,11 +199,12 @@ protected:
             
             sprintf(cloneName, "KnotLight%d", i);
             Light* knotLight = mSceneMgr->createLight(cloneName);
+            SceneNode* ln = rootNode->createChildSceneNode(clonePos + Vector3(0,3,0));
+            ln->setDirection(Vector3::NEGATIVE_UNIT_Y);
+            ln->attachObject(knotLight);
             knotLight->setType(Light::LT_SPOTLIGHT);
             knotLight->setDiffuseColour(SAMPLE_COLORS[i]);
             knotLight->setSpecularColour(ColourValue::White);
-            knotLight->setPosition(clonePos + Vector3(0,3,0));
-            knotLight->setDirection(Vector3::NEGATIVE_UNIT_Y);
             knotLight->setSpotlightRange(Degree(25), Degree(45), 1);
             knotLight->setAttenuation(6, 1, 0.2, 0);
         }
@@ -342,10 +343,10 @@ protected:
     void createSampleLights()
     {
         // Create some lights       
-        vector<Light*>::type lights;
+        std::vector<Light*> lights;
         SceneNode *parentNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("LightsParent");
         // Create light nodes
-        vector<Node*>::type nodes;
+        std::vector<Node*> nodes;
         
         Vector4 attParams = Vector4(4,1,0,7);
         Real lightRadius = 25;
@@ -414,7 +415,7 @@ protected:
         // Create marker meshes to show user where the lights are
         Entity *ent;
         GeomUtils::createSphere("PointLightMesh", 0.05f, 5, 5, true, true);
-        for(vector<Light*>::type::iterator i=lights.begin(); i!=lights.end(); ++i)
+        for(std::vector<Light*>::iterator i=lights.begin(); i!=lights.end(); ++i)
         {
             Light* light = *i;
             ent = mSceneMgr->createEntity(light->getName()+"v", "PointLightMesh");

@@ -60,7 +60,7 @@ void RTShaderSRSSegmentedLights::updateGpuProgramsParams(Renderable* rend, Pass*
     if ((mLightParamsList.empty()) && (!mUseSegmentedLightTexture))
         return;
 
-    const Matrix4& matWorld = source->getWorldMatrix();
+    const Affine3& matWorld = source->getWorldMatrix();
     Light::LightTypes curLightType = Light::LT_DIRECTIONAL; 
     unsigned int curSearchLightIndex = 0;
 
@@ -105,14 +105,14 @@ void RTShaderSRSSegmentedLights::updateGpuProgramsParams(Renderable* rend, Pass*
         case Light::LT_DIRECTIONAL:
 
             // Update light direction.
-            vParameter = matWorld.transformAffine(srcLight->getAs4DVector(true));
+            vParameter = matWorld * srcLight->getAs4DVector(true);
             curParams.mDirection->setGpuParameter(vParameter.ptr(),3,1);
             break;
 
         case Light::LT_POINT:
 
             // Update light position.
-            vParameter = matWorld.transformAffine(srcLight->getAs4DVector(true));
+            vParameter = matWorld * srcLight->getAs4DVector(true);
             curParams.mPosition->setGpuParameter(vParameter.ptr(),3,1);
 
             // Update light attenuation parameters.
@@ -122,17 +122,14 @@ void RTShaderSRSSegmentedLights::updateGpuProgramsParams(Renderable* rend, Pass*
         case Light::LT_SPOTLIGHT:
             {                       
                 Ogre::Vector3 vec3;
-                Ogre::Matrix3 matWorldIT;
-
 
                 // Update light position.
-                vParameter = matWorld.transformAffine(srcLight->getAs4DVector(true));
+                vParameter = matWorld * srcLight->getAs4DVector(true);
                 curParams.mPosition->setGpuParameter(vParameter.ptr(),3,1);
 
 
                 // Update light direction.
-                source->getInverseTransposeWorldMatrix().extract3x3Matrix(matWorldIT);
-                vec3 = matWorldIT * srcLight->getDerivedDirection();
+                vec3 = source->getInverseTransposeWorldMatrix().linear() * srcLight->getDerivedDirection();
                 vec3.normalise();
 
                 vParameter.x = -vec3.x;
@@ -213,8 +210,8 @@ bool RTShaderSRSSegmentedLights::resolveParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool RTShaderSRSSegmentedLights::resolveGlobalParameters(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* vsMain = vsProgram->getEntryPointFunction();
     Function* psMain = psProgram->getEntryPointFunction();
 
@@ -383,7 +380,7 @@ bool RTShaderSRSSegmentedLights::resolveGlobalParameters(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool RTShaderSRSSegmentedLights::resolvePerLightParameters(ProgramSet* programSet)
 {
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
 
     // Resolve per light parameters.
     for (unsigned int i=0; i < mLightParamsList.size(); ++i)
@@ -452,8 +449,8 @@ bool RTShaderSRSSegmentedLights::resolvePerLightParameters(ProgramSet* programSe
 //-----------------------------------------------------------------------
 bool RTShaderSRSSegmentedLights::resolveDependencies(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram();
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM);
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
 
     vsProgram->addDependency(FFP_LIB_COMMON);
     vsProgram->addDependency(SL_LIB_PERPIXELLIGHTING);
@@ -467,9 +464,9 @@ bool RTShaderSRSSegmentedLights::resolveDependencies(ProgramSet* programSet)
 //-----------------------------------------------------------------------
 bool RTShaderSRSSegmentedLights::addFunctionInvocations(ProgramSet* programSet)
 {
-    Program* vsProgram = programSet->getCpuVertexProgram(); 
+    Program* vsProgram = programSet->getCpuProgram(GPT_VERTEX_PROGRAM); 
     Function* vsMain = vsProgram->getEntryPointFunction();  
-    Program* psProgram = programSet->getCpuFragmentProgram();
+    Program* psProgram = programSet->getCpuProgram(GPT_FRAGMENT_PROGRAM);
     Function* psMain = psProgram->getEntryPointFunction();  
 
     // Add the global illumination functions.

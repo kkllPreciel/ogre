@@ -29,28 +29,19 @@ THE SOFTWARE.
 
 namespace Ogre {
     //-----------------------------------------------------------------------
-    SceneNode::SceneNode(SceneManager* creator)
-        : Node()
-        , mWireBoundingBox(0)
-        , mShowBoundingBox(false)
-        , mHideBoundingBox(false)
-        , mCreator(creator)
-        , mYawFixed(false)
-        , mAutoTrackTarget(0)
-        , mIsInSceneGraph(false)
+    SceneNode::SceneNode(SceneManager* creator) : SceneNode(creator, BLANKSTRING)
     {
-        needUpdate();
     }
     //-----------------------------------------------------------------------
     SceneNode::SceneNode(SceneManager* creator, const String& name)
         : Node(name)
-        , mWireBoundingBox(0)
+        , mCreator(creator)
+        , mAutoTrackTarget(0)
+        , mYawFixed(false)
+        , mIsInSceneGraph(false)
         , mShowBoundingBox(false)
         , mHideBoundingBox(false)
-        , mCreator(creator)
-        , mYawFixed(false)
-        , mAutoTrackTarget(0)
-        , mIsInSceneGraph(false)
+
     {
         needUpdate();
     }
@@ -64,8 +55,6 @@ namespace Ogre {
             (*itr)->_notifyAttached((SceneNode*)0);
         }
         mObjectsByName.clear();
-
-        OGRE_DELETE mWireBoundingBox;
     }
     //-----------------------------------------------------------------------
     void SceneNode::_update(bool updateChildren, bool parentHasChanged)
@@ -325,11 +314,11 @@ namespace Ogre {
 
     void SceneNode::_addBoundingBoxToQueue(RenderQueue* queue) {
         // Create a WireBoundingBox if needed.
-        if (mWireBoundingBox == NULL) {
-            mWireBoundingBox = OGRE_NEW WireBoundingBox();
+        if (!mWireBoundingBox) {
+            mWireBoundingBox.reset(new WireBoundingBox());
         }
         mWireBoundingBox->setupBoundingBox(mWorldAABB);
-        queue->addRenderable(mWireBoundingBox);
+        queue->addRenderable(mWireBoundingBox.get());
     }
 
     //-----------------------------------------------------------------------

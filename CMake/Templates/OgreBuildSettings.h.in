@@ -5,7 +5,13 @@
 
 #cmakedefine OGRE_STATIC_LIB
 #cmakedefine01 OGRE_DEBUG_MODE
-#cmakedefine01 OGRE_RESOURCEMANAGER_STRICT
+
+/** There are three modes for resource lookup
+0 - LEGACY - search in all groups twice - for case sensitive and insensitive lookup
+1 - PEDANTIC - require an explicit resource group. Case sensitive lookup.
+2 - STRICT - search in default group if not specified otherwise. Case sensitive lookup.
+*/
+#define OGRE_RESOURCEMANAGER_STRICT @OGRE_RESOURCEMANAGER_STRICT@
 
 #cmakedefine OGRE_BUILD_RENDERSYSTEM_D3D9
 #cmakedefine OGRE_BUILD_RENDERSYSTEM_D3D11
@@ -17,6 +23,8 @@
 #cmakedefine OGRE_BUILD_PLUGIN_PCZ
 #cmakedefine OGRE_BUILD_PLUGIN_PFX
 #cmakedefine OGRE_BUILD_PLUGIN_CG
+#cmakedefine OGRE_BUILD_PLUGIN_STBI
+#cmakedefine OGRE_BUILD_PLUGIN_FREEIMAGE
 #cmakedefine OGRE_BUILD_COMPONENT_PAGING
 #cmakedefine OGRE_BUILD_COMPONENT_MESHLODGENERATOR
 #cmakedefine OGRE_BUILD_COMPONENT_TERRAIN
@@ -85,9 +93,6 @@ OGRE_THREAD_PROVIDER = 4
 
 #cmakedefine01 OGRE_NO_MESHLOD
 
-/** Disables use of the FreeImage image library for loading images. */
-#cmakedefine01 OGRE_NO_FREEIMAGE
-
 /** Disables use of the internal image codec for loading DDS files. */
 #cmakedefine01 OGRE_NO_DDS_CODEC
 
@@ -96,9 +101,6 @@ OGRE_THREAD_PROVIDER = 4
 
 /** Disables use of the internal image codec for loading ETC files. */
 #cmakedefine01 OGRE_NO_ETC_CODEC
-
-/** Disables use of the internal image codec for loading image files. */
-#cmakedefine01 OGRE_NO_STBI_CODEC
 
 #cmakedefine01 OGRE_NO_ASTC_CODEC
 

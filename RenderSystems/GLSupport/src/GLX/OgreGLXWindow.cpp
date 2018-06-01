@@ -196,7 +196,7 @@ namespace Ogre
 
             if((opt = miscParams->find("parentWindowHandle")) != end)
             {
-                vector<String>::type tokens = StringUtil::split(opt->second, " :");
+                std::vector<String> tokens = StringUtil::split(opt->second, " :");
 
                 if (tokens.size() == 3)
                 {
@@ -215,7 +215,7 @@ namespace Ogre
             }
             else if((opt = miscParams->find("externalWindowHandle")) != end)
             {
-                vector<String>::type tokens = StringUtil::split(opt->second, " :");
+                std::vector<String> tokens = StringUtil::split(opt->second, " :");
 
                 LogManager::getSingleton().logMessage(
                     "GLXWindow::create: The externalWindowHandle parameter is deprecated.\n"
@@ -449,8 +449,8 @@ namespace Ogre
                 }
 
                 XTextProperty titleprop;
-                char *lst = const_cast<char *>(title.c_str());
-                XStringListToTextProperty((char **)&lst, 1, &titleprop);
+                char *lst = &title[0];
+                XStringListToTextProperty(&lst, 1, &titleprop);
                 XSetWMProperties(xDisplay, mWindow, &titleprop, NULL, NULL, 0, sizeHints, wmHints, NULL);
 
                 XFree(titleprop.value);
