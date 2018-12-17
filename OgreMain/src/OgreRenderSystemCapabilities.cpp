@@ -56,7 +56,7 @@ namespace Ogre {
     }
 
     //-----------------------------------------------------------------------
-    void RenderSystemCapabilities::log(Log* pLog)
+    void RenderSystemCapabilities::log(Log* pLog) const
     {
         pLog->logMessage("RenderSystem capabilities");
         pLog->logMessage("-------------------------");
@@ -244,6 +244,9 @@ namespace Ogre {
             " * Point Sprites: "
             + StringConverter::toString(hasCapability(RSC_POINT_SPRITES), true));
         pLog->logMessage(
+            " * Wide Lines: "
+            + StringConverter::toString(hasCapability(RSC_WIDE_LINES), true));
+        pLog->logMessage(
             " * Hardware Gamma: "
             + StringConverter::toString(hasCapability(RSC_HW_GAMMA), true));
         pLog->logMessage(
@@ -314,6 +317,9 @@ namespace Ogre {
             pLog->logMessage(
                 " * DirectX per stage constants: "
                 + StringConverter::toString(hasCapability(RSC_PERSTAGECONSTANT), true));
+            pLog->logMessage(
+                " * W-Buffer supported: "
+                + StringConverter::toString(hasCapability(RSC_WBUFFER), true));
         }
     }
     //---------------------------------------------------------------------

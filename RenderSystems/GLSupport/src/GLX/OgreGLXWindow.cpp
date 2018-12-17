@@ -201,12 +201,12 @@ namespace Ogre
                 if (tokens.size() == 3)
                 {
                     // deprecated display:screen:xid format
-                    parentWindow = StringConverter::parseUnsignedLong(tokens[2]);
+                    StringConverter::parse(tokens[2], parentWindow);
                 }
                 else
                 {
                     // xid format
-                    parentWindow = StringConverter::parseUnsignedLong(tokens[0]);
+                    StringConverter::parse(tokens[0], parentWindow);
                 }
 
                 // reset drawable in case currentGLContext was used
@@ -225,17 +225,17 @@ namespace Ogre
                 {
                     // Old display:screen:xid format
                     // The old GLX code always created a "parent" window in this case:
-                    parentWindow = StringConverter::parseUnsignedLong(tokens[2]);
+                    StringConverter::parse(tokens[2], parentWindow);
                 }
                 else if (tokens.size() == 4)
                 {
                     // Old display:screen:xid:visualinfo format
-                    externalWindow = StringConverter::parseUnsignedLong(tokens[2]);
+                    StringConverter::parse(tokens[2], externalWindow);
                 }
                 else
                 {
                     // xid format
-                    externalWindow = StringConverter::parseUnsignedLong(tokens[0]);
+                    StringConverter::parse(tokens[0], externalWindow);
                 }
             }
 
@@ -673,18 +673,17 @@ namespace Ogre
 
         if(width != 0 && height != 0)
         {
-            if (!mIsExternal)
+            if (!mIsTopLevel)
             {
                 XResizeWindow(mGLSupport->getXDisplay(), mWindow, width, height);
+                XFlush(mGLSupport->getXDisplay());
             }
-            else
-            {
-                mWidth = width;
-                mHeight = height;
 
-                for (ViewportList::iterator it = mViewportList.begin(); it != mViewportList.end(); ++it)
-                    (*it).second->_updateDimensions();
-            }
+            mWidth = width;
+            mHeight = height;
+
+            for (ViewportList::iterator it = mViewportList.begin(); it != mViewportList.end(); ++it)
+                (*it).second->_updateDimensions();
         }
     }
 
@@ -697,29 +696,36 @@ namespace Ogre
         Display* xDisplay = mGLSupport->getXDisplay();
         XWindowAttributes windowAttrib;
 
+        Window parent, root, *children;
+        uint nChildren;
+
+        XQueryTree(xDisplay, mWindow, &root, &parent, &children, &nChildren);
+
+        if (children)
+            XFree(children);
+
+        XGetWindowAttributes(xDisplay, parent, &windowAttrib);
+
         if (mIsTopLevel && !mIsFullScreen)
         {
-            Window parent, root, *children;
-            uint nChildren;
-
-            XQueryTree(xDisplay, mWindow, &root, &parent, &children, &nChildren);
-
-            if (children)
-                XFree(children);
-
-            XGetWindowAttributes(xDisplay, parent, &windowAttrib);
-
+            // offset from window decorations
             mLeft = windowAttrib.x;
             mTop  = windowAttrib.y;
+            // w/ h of the actual renderwindow
+            XGetWindowAttributes(xDisplay, mWindow, &windowAttrib);
         }
-
-        XGetWindowAttributes(xDisplay, mWindow, &windowAttrib);
 
         if (mWidth == (size_t)windowAttrib.width && mHeight == (size_t)windowAttrib.height)
             return;
 
         mWidth = windowAttrib.width;
         mHeight = windowAttrib.height;
+
+        if(!mIsTopLevel)
+        {
+            XResizeWindow(xDisplay, mWindow, mWidth, mHeight);
+            XFlush(xDisplay);
+        }
 
         for (ViewportList::iterator it = mViewportList.begin(); it != mViewportList.end(); ++it)
             (*it).second->_updateDimensions();
@@ -770,6 +776,11 @@ namespace Ogre
     }
 
     //-------------------------------------------------------------------------------------------------//
+    PixelFormat GLXWindow::suggestPixelFormat() const
+    {
+        return mGLSupport->getContextProfile() == GLNativeSupport::CONTEXT_ES ? PF_BYTE_RGBA : PF_BYTE_RGB;
+    }
+
     void GLXWindow::copyContentsToMemory(const Box& src, const PixelBox &dst, FrameBuffer buffer)
     {
         if (mClosed)
@@ -813,4 +824,6 @@ namespace Ogre
             mIsFullScreen = fullscreen;
         }
     }
+
+    GLContext* GLXWindow::getContext() const { return mContext; }
 }

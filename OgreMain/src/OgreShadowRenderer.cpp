@@ -317,13 +317,11 @@ void SceneManager::ShadowRenderer::renderTextureShadowCasterQueueGroupObjects(
     {
         // Use simple black / white mask if additive
         mSceneManager->setAmbientLight(ColourValue::Black);
-        mDestRenderSystem->setAmbientLight(0, 0, 0);
     }
     else
     {
         // Use shadow colour as caster colour if modulative
         mSceneManager->setAmbientLight(mShadowColour);
-        mDestRenderSystem->setAmbientLight(mShadowColour);
     }
 
     while (groupIt.hasMoreElements())
@@ -346,7 +344,6 @@ void SceneManager::ShadowRenderer::renderTextureShadowCasterQueueGroupObjects(
 
     // reset ambient light
     mSceneManager->setAmbientLight(currAmbient);
-    mDestRenderSystem->setAmbientLight(currAmbient);
 }
 //-----------------------------------------------------------------------
 void SceneManager::ShadowRenderer::renderModulativeTextureShadowedQueueGroupObjects(
@@ -628,7 +625,6 @@ void SceneManager::ShadowRenderer::renderTextureShadowReceiverQueueGroupObjects(
     // Override auto param ambient to force vertex programs to go full-bright
     ColourValue currAmbient = mSceneManager->getAmbientLight();
     mSceneManager->setAmbientLight(ColourValue::White);
-    mDestRenderSystem->setAmbientLight(1, 1, 1);
 
     while (groupIt.hasMoreElements())
     {
@@ -643,8 +639,6 @@ void SceneManager::ShadowRenderer::renderTextureShadowReceiverQueueGroupObjects(
 
     // reset ambient
     mSceneManager->setAmbientLight(currAmbient);
-    mDestRenderSystem->setAmbientLight(currAmbient);
-
 }
 //---------------------------------------------------------------------
 void SceneManager::ShadowRenderer::ensureShadowTexturesCreated()
@@ -1015,15 +1009,12 @@ void SceneManager::ShadowRenderer::renderShadowVolumesToStencil(const Light* lig
         mShadowStencilPass->getAlphaRejectValue(), mShadowStencilPass->isAlphaToCoverageEnabled());
 
     // Turn off colour writing and depth writing
-    mDestRenderSystem->_setColourBufferWriteEnabled(false, false, false, false);
+    ColourBlendState disabled;
+    disabled.writeR = disabled.writeG = disabled.writeB = disabled.writeA = false;
+    mDestRenderSystem->setColourBlendState(disabled);
     mDestRenderSystem->_disableTextureUnitsFrom(0);
     mDestRenderSystem->_setDepthBufferParams(true, false, CMPF_LESS);
     mDestRenderSystem->setStencilCheckEnabled(true);
-
-    // Calculate extrusion distance
-    // Use direction light extrusion distance now, just form optimize code
-    // generate a little, point/spot light will up to date later
-    Real extrudeDist = mShadowDirLightExtrudeDist;
 
     // Figure out the near clip volume
     const PlaneBoundedVolume& nearClipVol =
@@ -1041,9 +1032,14 @@ void SceneManager::ShadowRenderer::renderShadowVolumesToStencil(const Light* lig
         bool zfailAlgo = camera->isCustomNearClipPlaneEnabled();
         unsigned long flags = 0;
 
+        // Calculate extrusion distance
+        Real extrudeDist = mShadowDirLightExtrudeDist;
         if (light->getType() != Light::LT_DIRECTIONAL)
         {
-            extrudeDist = caster->getPointExtrusionDistance(light);
+            // we have to limit shadow extrusion to avoid cliping by far clip plane 
+            extrudeDist = std::min(caster->getPointExtrusionDistance(light), mShadowDirLightExtrudeDist); 
+            // Set autoparams for finite point light extrusion
+            mSceneManager->mAutoParamDataSource->setShadowPointLightExtrusionDistance(extrudeDist);
         }
 
         Real darkCapExtrudeDist = extrudeDist;
@@ -1132,13 +1128,11 @@ void SceneManager::ShadowRenderer::renderShadowVolumesToStencil(const Light* lig
             mSceneManager->_setPass(mShadowDebugPass);
             renderShadowVolumeObjects(iShadowRenderables, mShadowDebugPass, &lightList, flags,
                 true, false, false);
-            mDestRenderSystem->_setColourBufferWriteEnabled(false, false, false, false);
+            mDestRenderSystem->setColourBlendState(disabled);
             mDestRenderSystem->_setDepthBufferFunction(CMPF_LESS);
         }
     }
 
-    // revert colour write state
-    mDestRenderSystem->_setColourBufferWriteEnabled(true, true, true, true);
     // revert depth state
     mDestRenderSystem->_setDepthBufferParams();
 
@@ -1839,11 +1833,8 @@ const Pass* SceneManager::ShadowRenderer::deriveShadowReceiverPass(const Pass* p
         {
             return retPass = pass->getParent()->getShadowReceiverMaterial()->getBestTechnique()->getPass(0);
         }
-        else
-        {
-            retPass = mShadowTextureCustomReceiverPass ?
-                mShadowTextureCustomReceiverPass : mShadowReceiverPass;
-        }
+
+        retPass = mShadowTextureCustomReceiverPass ? mShadowTextureCustomReceiverPass : mShadowReceiverPass;
 
         // Does incoming pass have a custom shadow receiver program?
         if (!pass->getShadowReceiverVertexProgramName().empty())
@@ -1862,7 +1853,7 @@ const Pass* SceneManager::ShadowRenderer::deriveShadowReceiverPass(const Pass* p
         }
         else
         {
-            if (retPass == mShadowTextureCustomReceiverPass)
+            if (mShadowTextureCustomReceiverPass && retPass == mShadowTextureCustomReceiverPass)
             {
                 // reset vp?
                 if (mShadowTextureCustomReceiverPass->getVertexProgramName() !=

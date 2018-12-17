@@ -117,12 +117,12 @@ CompositorChain *CompositorManager::getCompositorChain(Viewport *vp)
     }
 }
 //-----------------------------------------------------------------------
-bool CompositorManager::hasCompositorChain(Viewport *vp) const
+bool CompositorManager::hasCompositorChain(const Viewport *vp) const
 {
     return mChains.find(vp) != mChains.end();
 }
 //-----------------------------------------------------------------------
-void CompositorManager::removeCompositorChain(Viewport *vp)
+void CompositorManager::removeCompositorChain(const Viewport *vp)
 {
     Chains::iterator i = mChains.find(vp);
     if (i != mChains.end())
@@ -175,29 +175,19 @@ CompositorInstance *CompositorManager::addCompositor(Viewport *vp, const String 
 void CompositorManager::removeCompositor(Viewport *vp, const String &compositor)
 {
     CompositorChain *chain = getCompositorChain(vp);
-    for(size_t pos=0; pos < chain->getNumCompositors(); ++pos)
-    {
-        CompositorInstance *instance = chain->getCompositor(pos);
-        if(instance->getCompositor()->getName() == compositor)
-        {
-            chain->removeCompositor(pos);
-            break;
-        }
-    }
+    size_t pos = chain->getCompositorPosition(compositor);
+
+    if(pos != CompositorChain::NPOS)
+        chain->removeCompositor(pos);
 }
 //-----------------------------------------------------------------------
 void CompositorManager::setCompositorEnabled(Viewport *vp, const String &compositor, bool value)
 {
     CompositorChain *chain = getCompositorChain(vp);
-    for(size_t pos=0; pos < chain->getNumCompositors(); ++pos)
-    {
-        CompositorInstance *instance = chain->getCompositor(pos);
-        if(instance->getCompositor()->getName() == compositor)
-        {
-            chain->setCompositorEnabled(pos, value);
-            break;
-        }
-    }
+    size_t pos = chain->getCompositorPosition(compositor);
+
+    if(pos != CompositorChain::NPOS)
+        chain->setCompositorEnabled(pos, value);
 }
 //---------------------------------------------------------------------
 void CompositorManager::_reconstructAllCompositorResources()
@@ -209,10 +199,8 @@ void CompositorManager::_reconstructAllCompositorResources()
     for (Chains::iterator i = mChains.begin(); i != mChains.end(); ++i)
     {
         CompositorChain* chain = i->second;
-        CompositorChain::InstanceIterator instIt = chain->getCompositors();
-        while (instIt.hasMoreElements())
+        for (CompositorInstance* inst : chain->getCompositorInstances())
         {
-            CompositorInstance* inst = instIt.getNext();
             if (inst->getEnabled())
             {
                 inst->setEnabled(false);
@@ -507,10 +495,9 @@ CompositorLogic* CompositorManager::getCompositorLogic(const String& name)
     return it->second;
 }
 //---------------------------------------------------------------------
-bool CompositorManager::getHasCompositorLogic(const String& name)
+bool CompositorManager::hasCompositorLogic(const String& name)
 {
-	CompositorLogicMap::iterator it = mCompositorLogics.find(name);
-	return it == mCompositorLogics.end() ? false : true;
+	return mCompositorLogics.find(name) != mCompositorLogics.end();
 }
 //---------------------------------------------------------------------
 void CompositorManager::registerCustomCompositionPass(const String& name, CustomCompositionPass* logic)
@@ -530,7 +517,7 @@ void CompositorManager::registerCustomCompositionPass(const String& name, Custom
     mCustomCompositionPasses[name] = logic;
 }
 //---------------------------------------------------------------------
-void CompositorManager::unRegisterCustomCompositionPass(const String& name)
+void CompositorManager::unregisterCustomCompositionPass(const String& name)
 {	
 	CustomCompositionPassMap::iterator itor = mCustomCompositionPasses.find(name);
 	if( itor == mCustomCompositionPasses.end() )
@@ -542,10 +529,9 @@ void CompositorManager::unRegisterCustomCompositionPass(const String& name)
 	mCustomCompositionPasses.erase( itor );
 }
 //---------------------------------------------------------------------
-bool CompositorManager::getHasCompositionPass(const String& name)
+bool CompositorManager::hasCustomCompositionPass(const String& name)
 {
-	CustomCompositionPassMap::iterator it = mCustomCompositionPasses.find(name);
-	return it == mCustomCompositionPasses.end() ? false : true;
+	return mCustomCompositionPasses.find(name) != mCustomCompositionPasses.end();
 }
 //---------------------------------------------------------------------
 CustomCompositionPass* CompositorManager::getCustomCompositionPass(const String& name)

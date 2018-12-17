@@ -33,7 +33,7 @@ THE SOFTWARE.
 
 #include "OgreMatrix3.h"
 #include "OgreVector4.h"
-#include "OgrePlane.h"
+
 namespace Ogre
 {
     /** \addtogroup Core
@@ -208,6 +208,11 @@ namespace Ogre
             m[1][0] = m10; m[1][1] = m11; m[1][2] = m12; m[1][3] = m13;
             m[2][0] = m20; m[2][1] = m21; m[2][2] = m22; m[2][3] = m23;
             m[3][0] = m30; m[3][1] = m31; m[3][2] = m32; m[3][3] = m33;
+        }
+        
+        inline Matrix4 (const Real* arr)
+        {
+            memcpy(m,arr,16*sizeof(Real));
         }
 
         /** Creates a standard 4x4 transformation matrix with a zero translation part from a rotation/scaling 3x3 matrix.
@@ -546,20 +551,6 @@ namespace Ogre
             v.x*mat[0][2] + v.y*mat[1][2] + v.z*mat[2][2] + v.w*mat[3][2],
             v.x*mat[0][3] + v.y*mat[1][3] + v.z*mat[2][3] + v.w*mat[3][3]
             );
-    }
-
-    inline Plane operator * (const Matrix4& mat, const Plane& p)
-    {
-        Plane ret;
-        Matrix4 invTrans = mat.inverse().transpose();
-        Vector4 v4( p.normal.x, p.normal.y, p.normal.z, p.d );
-        v4 = invTrans * v4;
-        ret.normal.x = v4.x;
-        ret.normal.y = v4.y;
-        ret.normal.z = v4.z;
-        ret.d = v4.w / ret.normal.normalise();
-
-        return ret;
     }
     /** @} */
     /** @} */

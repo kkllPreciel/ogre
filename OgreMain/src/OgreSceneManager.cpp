@@ -784,8 +784,8 @@ void SceneManager::_destroySceneNode(SceneNodeList::iterator i)
 
     if (i == mSceneNodes.end())
     {
-        OGRE_EXCEPT(Exception::ERR_ITEM_NOT_FOUND, "SceneNode '" + (*i)->getName() + "' not found.",
-            "SceneManager::destroySceneNode");
+        OGRE_EXCEPT(Exception::ERR_ITEM_NOT_FOUND, "SceneNode not found.",
+                    "SceneManager::_destroySceneNode");
     }
 
     // Find any scene nodes which are tracking this node, and turn them off
@@ -1067,29 +1067,11 @@ const Pass* SceneManager::_setPass(const Pass* pass, bool evenIfSuppressed,
     // The rest of the settings are the same no matter whether we use programs or not
 
     // Set scene blending
-    if ( pass->hasSeparateSceneBlending( ) )
-    {
-        mDestRenderSystem->_setSeparateSceneBlending(
-            pass->getSourceBlendFactor(), pass->getDestBlendFactor(),
-            pass->getSourceBlendFactorAlpha(), pass->getDestBlendFactorAlpha(),
-            pass->getSceneBlendingOperation(),
-            pass->hasSeparateSceneBlendingOperations() ? pass->getSceneBlendingOperation() : pass->getSceneBlendingOperationAlpha() );
-    }
-    else
-    {
-        if(pass->hasSeparateSceneBlendingOperations( ) )
-        {
-            mDestRenderSystem->_setSeparateSceneBlending(
-                pass->getSourceBlendFactor(), pass->getDestBlendFactor(),
-                pass->getSourceBlendFactor(), pass->getDestBlendFactor(),
-                pass->getSceneBlendingOperation(), pass->getSceneBlendingOperationAlpha() );
-        }
-        else
-        {
-            mDestRenderSystem->_setSceneBlending(
-                pass->getSourceBlendFactor(), pass->getDestBlendFactor(), pass->getSceneBlendingOperation() );
-        }
-    }
+    mDestRenderSystem->setColourBlendState(pass->getBlendState());
+
+    // Line width
+    if (mDestRenderSystem->getCapabilities()->hasCapability(RSC_WIDE_LINES))
+        mDestRenderSystem->_setLineWidth(pass->getLineWidth());
 
     // Set point parameters
     mDestRenderSystem->_setPointParameters(
@@ -1211,10 +1193,7 @@ const Pass* SceneManager::_setPass(const Pass* pass, bool evenIfSuppressed,
     mDestRenderSystem->_setAlphaRejectSettings(pass->getAlphaRejectFunction(),
                                                pass->getAlphaRejectValue(),
                                                pass->isAlphaToCoverageEnabled());
-    // Set colour write mode
-    // Right now we only use on/off, not per-channel
-    bool colWrite = pass->getColourWriteEnabled();
-    mDestRenderSystem->_setColourBufferWriteEnabled(colWrite, colWrite, colWrite, colWrite);
+
     // Culling mode
     if (isShadowTechniqueTextureBased() && mIlluminationStage == IRS_RENDER_TO_TEXTURE &&
         mShadowCasterRenderBackFaces && pass->getCullingMode() == CULL_CLOCKWISE)
@@ -1424,9 +1403,6 @@ void SceneManager::_renderScene(Camera* camera, Viewport* vp, bool includeOverla
         // Set autoparams for finite dir light extrusion
         mAutoParamDataSource->setShadowDirLightExtrusionDistance(mShadowRenderer.mShadowDirLightExtrudeDist);
 
-        // Tell rendersystem
-        mDestRenderSystem->setAmbientLight(mAutoParamDataSource->getAmbientLightColour());
-
         // Tell params about render target
         mAutoParamDataSource->setCurrentRenderTarget(vp->getTarget());
 
@@ -1434,11 +1410,7 @@ void SceneManager::_renderScene(Camera* camera, Viewport* vp, bool includeOverla
         // Set camera window clipping planes (if any)
         if (mDestRenderSystem->getCapabilities()->hasCapability(RSC_USER_CLIP_PLANES))
         {
-            mDestRenderSystem->resetClipPlanes();
-            if (camera->isWindowSet())  
-            {
-                mDestRenderSystem->setClipPlanes(camera->getWindowPlanes());
-            }
+            mDestRenderSystem->setClipPlanes(camera->isWindowSet() ? camera->getWindowPlanes() : PlaneList());
         }
 
         // Prepare render queue for receiving new objects
@@ -1500,7 +1472,6 @@ void SceneManager::_renderScene(Camera* camera, Viewport* vp, bool includeOverla
     if (mCameraRelativeRendering)
     {
         mCachedViewMatrix.setTrans(Vector3::ZERO);
-        mCameraRelativePosition = mCameraInProgress->getDerivedPosition();
     }
     mDestRenderSystem->_setTextureProjectionRelativeTo(mCameraRelativeRendering, camera->getDerivedPosition());
 
@@ -1954,6 +1925,8 @@ void SceneManager::renderObjects(const QueuedRenderableCollection& objs,
                                  const LightList* manualLightList,
                                  bool transparentShadowCastersMode)
 {
+    mDestRenderSystem->setAmbientLight(mAutoParamDataSource->getAmbientLightColour());
+
     mActiveQueuedRenderableVisitor->autoLights = doLightIteration;
     mActiveQueuedRenderableVisitor->manualLightList = manualLightList;
     mActiveQueuedRenderableVisitor->transparentShadowCastersMode = transparentShadowCastersMode;
@@ -2023,34 +1996,16 @@ void SceneManager::renderBasicQueueGroupObjects(RenderQueueGroup* pGroup,
 void SceneManager::setWorldTransform(Renderable* rend, bool fixedFunction)
 {
     // Set world transformation
-    ushort numMatrices = rend->getNumWorldTransforms();
-    
-    if (numMatrices > 0)
+    if (fixedFunction)
     {
-        rend->getWorldTransforms(reinterpret_cast<Matrix4*>(mTempXform));
-
-        if (mCameraRelativeRendering && !rend->getUseIdentityView())
-        {
-            for (ushort i = 0; i < numMatrices; ++i)
-            {
-                mTempXform[i].setTrans(mTempXform[i].getTrans() - mCameraRelativePosition);
-            }
-        }
-
-        if (fixedFunction)
-        {
-            // Set hardware matrix to nothing for vertex blending
-            mDestRenderSystem->_setWorldMatrix(numMatrices > 1 ? Matrix4::IDENTITY : *mTempXform);
-        }
+        mDestRenderSystem->_setWorldMatrix(mAutoParamDataSource->getWorldMatrix());
     }
+
     // Issue view / projection changes if any
     useRenderableViewProjMode(rend, fixedFunction);
 
     // mark per-object params as dirty
     mGpuParamsDirty |= (uint16)GPV_PER_OBJECT;
-
-    // Tell auto params object about the world matrices, eliminated query from renderable again
-    mAutoParamDataSource->setWorldMatrices(mTempXform, numMatrices);
 }
 //-----------------------------------------------------------------------
 void SceneManager::issueRenderWithLights(Renderable* rend, const Pass* pass,
@@ -2061,6 +2016,8 @@ void SceneManager::issueRenderWithLights(Renderable* rend, const Pass* pass,
     // Only do this if fixed-function vertex lighting applies
     if (pLightListToUse && (pass->isProgrammable() || pass->getLightingEnabled()))
         useLights(*pLightListToUse, pass->getMaxSimultaneousLights(), fixedFunction);
+
+    fireRenderSingleObject(rend, pass, mAutoParamDataSource.get(), pLightListToUse, false);
 
     // optional light scissoring & clipping
     ClipResult scissored = CLIPPED_NONE;
@@ -2104,11 +2061,8 @@ void SceneManager::renderSingleObject(Renderable* rend, const Pass* pass,
     // pass the FFP transform state to shader
     bool passTransformState = !vprog || vprog->getPassTransformStates();
 
-    if (pass->isProgrammable())
-    {
-        // Tell auto params object about the renderable change
-        mAutoParamDataSource->setCurrentRenderable(rend);
-    }
+    // Tell auto params object about the renderable change
+    mAutoParamDataSource->setCurrentRenderable(rend);
 
     setWorldTransform(rend, passTransformState);
 
@@ -2145,7 +2099,7 @@ void SceneManager::renderSingleObject(Renderable* rend, const Pass* pass,
     // Assume first world matrix representative - shaders that use multiple
     // matrices should control renormalisation themselves
     if ((pass->getNormaliseNormals() || mNormaliseNormalsOnScale) &&
-        mTempXform[0].linear().hasScale())
+        mAutoParamDataSource->getWorldMatrix().linear().hasScale())
         mDestRenderSystem->setNormaliseNormals(true);
     else
         mDestRenderSystem->setNormaliseNormals(false);
@@ -2156,7 +2110,7 @@ void SceneManager::renderSingleObject(Renderable* rend, const Pass* pass,
     {
         CullingMode cullMode = mPassCullingMode;
 
-        if (mTempXform[0].linear().hasNegativeScale())
+        if (mAutoParamDataSource->getWorldMatrix().linear().hasNegativeScale())
         {
             switch(mPassCullingMode)
             {
@@ -2200,7 +2154,6 @@ void SceneManager::renderSingleObject(Renderable* rend, const Pass* pass,
             (manualLightList && (manualLightList->size() != 1 ||
                                  manualLightList->front()->getType() == pass->getOnlyLightType())))
         {
-            fireRenderSingleObject(rend, pass, mAutoParamDataSource.get(), manualLightList, false);
             issueRenderWithLights(rend, pass, manualLightList, passLightParams, lightScissoringClipping);
         }
 
@@ -2347,7 +2300,6 @@ void SceneManager::renderSingleObject(Renderable* rend, const Pass* pass,
             lightsLeft = 0;
         }
 
-        fireRenderSingleObject(rend, pass, mAutoParamDataSource.get(), pLightListToUse, false);
         // issue the render op
 
         // We might need to update the depth bias each iteration
@@ -3611,7 +3563,7 @@ void SceneManager::resetLightClip()
     if (!mDestRenderSystem->getCapabilities()->hasCapability(RSC_USER_CLIP_PLANES))
         return;
 
-    mDestRenderSystem->resetClipPlanes();
+    mDestRenderSystem->setClipPlanes(PlaneList());
 }
 //---------------------------------------------------------------------
 const ColourValue& SceneManager::getShadowColour(void) const
@@ -3825,9 +3777,6 @@ void SceneManager::_resumeRendering(SceneManager::RenderContext* context)
     // Set autoparams for finite dir light extrusion
     mAutoParamDataSource->setShadowDirLightExtrusionDistance(mShadowRenderer.mShadowDirLightExtrudeDist);
 
-    // Tell params about current ambient light
-    mDestRenderSystem->setAmbientLight(mAutoParamDataSource->getAmbientLightColour());
-
     // Tell params about render target
     mAutoParamDataSource->setCurrentRenderTarget(vp->getTarget());
 
@@ -3835,11 +3784,7 @@ void SceneManager::_resumeRendering(SceneManager::RenderContext* context)
     // Set camera window clipping planes (if any)
     if (mDestRenderSystem->getCapabilities()->hasCapability(RSC_USER_CLIP_PLANES))
     {
-        mDestRenderSystem->resetClipPlanes();
-        if (camera->isWindowSet())  
-        {
-            mDestRenderSystem->setClipPlanes(camera->getWindowPlanes());
-        }
+        mDestRenderSystem->setClipPlanes(camera->isWindowSet() ? camera->getWindowPlanes() : PlaneList());
     }
     mCameraInProgress = context->camera;
     mDestRenderSystem->_resumeFrame(context->rsContext);
@@ -3855,7 +3800,6 @@ void SceneManager::_resumeRendering(SceneManager::RenderContext* context)
     if (mCameraRelativeRendering)
     {
         mCachedViewMatrix.setTrans(Vector3::ZERO);
-        mCameraRelativePosition = mCameraInProgress->getDerivedPosition();
     }
     mDestRenderSystem->_setTextureProjectionRelativeTo(mCameraRelativeRendering, mCameraInProgress->getDerivedPosition());
 
@@ -4569,41 +4513,15 @@ void SceneManager::updateGpuProgramParameters(const Pass* pass)
         if (mGpuParamsDirty)
             pass->_updateAutoParams(mAutoParamDataSource.get(), mGpuParamsDirty);
 
-        if (pass->hasVertexProgram())
+        for (int i = 0; i < GPT_COUNT; i++)
         {
-            mDestRenderSystem->bindGpuProgramParameters(GPT_VERTEX_PROGRAM, 
-                pass->getVertexProgramParameters(), mGpuParamsDirty);
+            GpuProgramType t = (GpuProgramType)i;
+            if (pass->hasGpuProgram(t))
+            {
+                mDestRenderSystem->bindGpuProgramParameters(t, pass->getGpuProgramParameters(t),
+                                                            mGpuParamsDirty);
+            }
         }
-
-        if (pass->hasGeometryProgram())
-        {
-            mDestRenderSystem->bindGpuProgramParameters(GPT_GEOMETRY_PROGRAM,
-                pass->getGeometryProgramParameters(), mGpuParamsDirty);
-        }
-
-        if (pass->hasFragmentProgram())
-        {
-            mDestRenderSystem->bindGpuProgramParameters(GPT_FRAGMENT_PROGRAM, 
-                pass->getFragmentProgramParameters(), mGpuParamsDirty);
-        }
-
-        if (pass->hasTessellationHullProgram())
-        {
-            mDestRenderSystem->bindGpuProgramParameters(GPT_HULL_PROGRAM, 
-                pass->getTessellationHullProgramParameters(), mGpuParamsDirty);
-        }
-
-        if (pass->hasTessellationDomainProgram())
-        {
-            mDestRenderSystem->bindGpuProgramParameters(GPT_DOMAIN_PROGRAM, 
-                pass->getTessellationDomainProgramParameters(), mGpuParamsDirty);
-        }
-
-                // if (pass->hasComputeProgram())
-        // {
-                //     mDestRenderSystem->bindGpuProgramParameters(GPT_COMPUTE_PROGRAM, 
-                //                                                 pass->getComputeProgramParameters(), mGpuParamsDirty);
-        // }
 
         mGpuParamsDirty = 0;
     }

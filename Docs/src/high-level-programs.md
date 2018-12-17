@@ -453,7 +453,7 @@ The requirements to read from or write to the fixed function pipeline are simila
 
 ## Parameter specification {#Program-Parameter-Specification}
 
-Parameters can be specified using one of 4 commands as shown below. The same syntax is used whether you are defining a parameter just for this particular use of the program, or when specifying the [Default Program Parameters](#Default-Program-Parameters). Parameters set in the specific use of the program override the defaults.
+Parameters can be specified using one of 4 commands as shown below. The same syntax is used whether you are defining a parameter just for this particular use of the program, or when specifying the @ref Default-Program-Parameters. Parameters set in the specific use of the program override the defaults.
 
 -   [param\_indexed](#param_005findexed)
 -   [param\_indexed\_auto](#param_005findexed_005fauto)
@@ -510,7 +510,11 @@ The allowed value codes and the meaning of extra\_params are detailed in [param\
 
 ## shared\_params\_ref
 
-This option allows you to reference shared parameter sets as defined in [Declaring Shared Parameters](#Declaring-Shared-Parameters).  Format: shared\_params\_ref &lt;shared\_set\_name&gt; Example: shared\_params\_ref mySharedParams
+This option allows you to reference shared parameter sets as defined in @ref Declaring-Shared-Parameters.
+@par
+Format: shared\_params\_ref &lt;shared\_set\_name&gt; 
+@par
+Example: shared\_params\_ref mySharedParams
 
 The only required parameter is a name, which must be the name of an already defined shared parameter set. All named parameters which are present in the program that are also present in the shared parameter set will be linked, and the shared parameters used as if you had defined them locally. This is dependent on the definitions (type and array size) matching between the shared set and the program.
 
@@ -593,15 +597,6 @@ If your vertex program makes use of [Vertex Texture Fetch](#Vertex-Texture-Fetch
 ```cpp
    uses_vertex_texture_fetch true
 ```
-
-# Adjacency information in Geometry Programs {#Adjacency-information-in-Geometry-Programs}
-
-Some geometry programs require adjacency information from the geometry. It means that a geometry shader doesn’t only get the information of the primitive it operates on, it also has access to its neighbours (in the case of lines or triangles). This directive will tell Ogre to send the information to the geometry shader.
-
-```cpp
-   uses_adjacency_information true
-```
-
 
 # Vertex Texture Fetch {#Vertex-Texture-Fetch}
 

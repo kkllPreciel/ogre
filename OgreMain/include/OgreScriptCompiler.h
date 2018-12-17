@@ -202,8 +202,9 @@ namespace Ogre
             CE_DUPLICATEOVERRIDE,
             CE_UNEXPECTEDTOKEN,
             CE_OBJECTBASENOTFOUND,
-            CE_UNSUPPORTEDBYRENDERSYSTEM,
-            CE_REFERENCETOANONEXISTINGOBJECT
+            CE_UNSUPPORTEDBYRENDERSYSTEM, //!< @deprecated do not use
+            CE_REFERENCETOANONEXISTINGOBJECT,
+            CE_DEPRECATEDSYMBOL
         };
         static String formatErrorCode(uint32 code);
     public:
@@ -275,6 +276,7 @@ namespace Ogre
         /// This function sets up the initial values in word id map
         void initWordMap();
     private:
+        friend String getPropertyName(const ScriptCompiler *compiler, uint32 id);
         // Resource group
         String mGroup;
         // The word -> id conversion table
@@ -858,6 +860,13 @@ namespace Ogre
 
         // Support for subroutine
         ID_SUBROUTINE,
+
+        // added during 1.11. re-sort for 1.12
+        ID_LINE_WIDTH,
+        ID_SAMPLER,
+        ID_SAMPLER_REF,
+        ID_THREAD_GROUPS,
+        ID_RENDER_CUSTOM,
 
         ID_END_BUILTIN_IDS
     };

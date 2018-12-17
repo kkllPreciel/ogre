@@ -68,7 +68,7 @@ THE SOFTWARE.
 #endif
 //---------------------------------------------------------------------
 #include <d3d10.h>
-#include <OgreNsightChecker.h>
+#include "OgreNsightChecker.h"
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WINRT &&  defined(_WIN32_WINNT_WINBLUE) && _WIN32_WINNT >= _WIN32_WINNT_WINBLUE
 #include <dxgi1_3.h> // for IDXGIDevice3::Trim
@@ -301,23 +301,19 @@ namespace Ogre
     //---------------------------------------------------------------------
     void D3D11RenderSystem::initConfigOptions()
     {
+        RenderSystem::initConfigOptions();
+
         ConfigOption optDevice;
         ConfigOption optVideoMode;
-        ConfigOption optFullScreen;
-        ConfigOption optVSync;
         ConfigOption optVSyncInterval;
 		ConfigOption optBackBufferCount;
         ConfigOption optAA;
         ConfigOption optFPUMode;
         ConfigOption optNVPerfHUD;
-        ConfigOption optSRGB;
         ConfigOption optMinFeatureLevels;
         ConfigOption optMaxFeatureLevels;
         ConfigOption optExceptionsErrorLevel;
         ConfigOption optDriverType;
-#if OGRE_NO_QUAD_BUFFER_STEREO == 0
-		ConfigOption optStereoMode;
-#endif
 
         optDevice.name = "Rendering Device";
         optDevice.currentValue = "(default)";
@@ -334,18 +330,6 @@ namespace Ogre
         optVideoMode.currentValue = "800 x 600 @ 32-bit colour";
         optVideoMode.immutable = false;
 
-        optFullScreen.name = "Full Screen";
-        optFullScreen.possibleValues.push_back( "Yes" );
-        optFullScreen.possibleValues.push_back( "No" );
-        optFullScreen.currentValue = "Yes";
-        optFullScreen.immutable = false;
-
-        optVSync.name = "VSync";
-        optVSync.immutable = false;
-        optVSync.possibleValues.push_back( "Yes" );
-        optVSync.possibleValues.push_back( "No" );
-        optVSync.currentValue = "No";
-
         optVSyncInterval.name = "VSync Interval";
         optVSyncInterval.immutable = false;
         optVSyncInterval.possibleValues.push_back( "1" );
@@ -360,7 +344,6 @@ namespace Ogre
 		optBackBufferCount.possibleValues.push_back( "1" );
 		optBackBufferCount.possibleValues.push_back( "2" );
 		optBackBufferCount.currentValue = "Auto";
-
 
         optAA.name = "FSAA";
         optAA.immutable = false;
@@ -383,13 +366,6 @@ namespace Ogre
         optNVPerfHUD.name = "Allow NVPerfHUD";
         optNVPerfHUD.possibleValues.push_back( "Yes" );
         optNVPerfHUD.possibleValues.push_back( "No" );
-
-        // SRGB on auto window
-        optSRGB.name = "sRGB Gamma Conversion";
-        optSRGB.possibleValues.push_back("Yes");
-        optSRGB.possibleValues.push_back("No");
-        optSRGB.currentValue = "No";
-        optSRGB.immutable = false;      
 
         // min feature level
         optMinFeatureLevels;
@@ -453,25 +429,12 @@ namespace Ogre
         optDriverType.currentValue = "Hardware";
         optDriverType.immutable = false;
 
-#if OGRE_NO_QUAD_BUFFER_STEREO == 0
-		optStereoMode.name = "Stereo Mode";
-		optStereoMode.possibleValues.push_back(StringConverter::toString(SMT_NONE));
-		optStereoMode.possibleValues.push_back(StringConverter::toString(SMT_FRAME_SEQUENTIAL));
-		optStereoMode.currentValue = optStereoMode.possibleValues[0];
-		optStereoMode.immutable = false;
-		
-		mOptions[optStereoMode.name] = optStereoMode;
-#endif
-
         mOptions[optDevice.name] = optDevice;
         mOptions[optVideoMode.name] = optVideoMode;
-        mOptions[optFullScreen.name] = optFullScreen;
-        mOptions[optVSync.name] = optVSync;
         mOptions[optVSyncInterval.name] = optVSyncInterval;
         mOptions[optAA.name] = optAA;
         mOptions[optFPUMode.name] = optFPUMode;
         mOptions[optNVPerfHUD.name] = optNVPerfHUD;
-        mOptions[optSRGB.name] = optSRGB;
         mOptions[optMinFeatureLevels.name] = optMinFeatureLevels;
         mOptions[optMaxFeatureLevels.name] = optMaxFeatureLevels;
         mOptions[optExceptionsErrorLevel.name] = optExceptionsErrorLevel;
@@ -671,12 +634,6 @@ namespace Ogre
         return BLANKSTRING;
     }
     //---------------------------------------------------------------------
-    ConfigOptionMap& D3D11RenderSystem::getConfigOptions()
-    {
-        // return a COPY of the current config options
-        return mOptions;
-    }
-    //---------------------------------------------------------------------
     RenderWindow* D3D11RenderSystem::_initialise( bool autoCreateWindow, const String& windowTitle )
     {
         RenderWindow* autoWindow = NULL;
@@ -798,18 +755,7 @@ namespace Ogre
             miscParams["vsyncInterval"] = opt->second.currentValue;
 
             autoWindow = this->_createRenderWindow( windowTitle, width, height, 
-                fullScreen, &miscParams );
-
-            // If we have 16bit depth buffer enable w-buffering.
-            assert( autoWindow );
-            if ( autoWindow->getColourDepth() == 16 ) 
-            { 
-                mWBuffer = true;
-            } 
-            else 
-            {
-                mWBuffer = false;
-            }           
+                fullScreen, &miscParams );         
         }
 
         LogManager::getSingleton().logMessage("***************************************");
@@ -993,7 +939,6 @@ namespace Ogre
         rsc->setNumTextureUnits(OGRE_MAX_TEXTURE_LAYERS);
         rsc->setNumVertexAttributes(D3D11_STANDARD_VERTEX_ELEMENT_COUNT);
         rsc->setCapability(RSC_ANISOTROPY);
-        rsc->setCapability(RSC_AUTOMIPMAP_COMPRESSED);
         rsc->setCapability(RSC_DOT3);
         // Cube map
         if (mFeatureLevel >= D3D_FEATURE_LEVEL_10_0)
@@ -1329,11 +1274,6 @@ namespace Ogre
         return true;
     }
     //-----------------------------------------------------------------------
-    bool D3D11RenderSystem::_checkTextureFilteringSupported(TextureType ttype, PixelFormat format, int usage)
-    {
-        return true;
-    }
-    //-----------------------------------------------------------------------
     MultiRenderTarget * D3D11RenderSystem::createMultiRenderTarget(const String & name)
     {
         MultiRenderTarget *retval;
@@ -1363,7 +1303,7 @@ namespace Ogre
         if ( mFeatureLevel < D3D_FEATURE_LEVEL_10_0)
             descDepth.Format            = DXGI_FORMAT_D24_UNORM_S8_UINT;
         else
-            descDepth.Format            = DXGI_FORMAT_R32_TYPELESS;
+            descDepth.Format            = DXGI_FORMAT_R24G8_TYPELESS;
 
         descDepth.SampleDesc.Count      = BBDesc.SampleDesc.Count;
         descDepth.SampleDesc.Quality    = BBDesc.SampleDesc.Quality;
@@ -1400,7 +1340,7 @@ namespace Ogre
         if(!mReadBackAsTexture && mFeatureLevel >= D3D_FEATURE_LEVEL_10_0 && BBDesc.SampleDesc.Count == 1)
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
-            viewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+            viewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
             viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             viewDesc.Texture2D.MostDetailedMip = 0;
             viewDesc.Texture2D.MipLevels = 1;
@@ -1419,11 +1359,7 @@ namespace Ogre
         D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
         ZeroMemory( &descDSV, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC) );
 
-        if (mFeatureLevel < D3D_FEATURE_LEVEL_10_0)
-            descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        else
-            descDSV.Format = DXGI_FORMAT_D32_FLOAT;
-
+        descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
         descDSV.ViewDimension = (BBDesc.SampleDesc.Count > 1) ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
         descDSV.Flags = 0 /* D3D11_DSV_READ_ONLY_DEPTH | D3D11_DSV_READ_ONLY_STENCIL */;    // TODO: Allows bind depth buffer as depth view AND texture simultaneously.
                                                                                             // TODO: Decide how to expose this feature
@@ -1789,10 +1725,29 @@ namespace Ogre
         }
         mSamplerStatesChanged = true;
     }
-    //---------------------------------------------------------------------
-    void D3D11RenderSystem::_setTextureCoordSet( size_t stage, size_t index )
+    void D3D11RenderSystem::_setSampler(size_t unit, Sampler& sampler)
     {
-        mTexStageDesc[stage].coordIndex = index;
+        mSamplerStatesChanged = true;
+
+        const Sampler::UVWAddressingMode& uvw = sampler.getAddressingMode();
+        mTexStageDesc[unit].samplerDesc.AddressU = D3D11Mappings::get(uvw.u);
+        mTexStageDesc[unit].samplerDesc.AddressV = D3D11Mappings::get(uvw.v);
+        mTexStageDesc[unit].samplerDesc.AddressW = D3D11Mappings::get(uvw.w);
+        mTexStageDesc[unit].samplerDesc.MipLODBias = sampler.getMipmapBias();
+
+        if (uvw.u == TAM_BORDER || uvw.v == TAM_BORDER || uvw.w == TAM_BORDER)
+            D3D11Mappings::get(sampler.getBorderColour(), mTexStageDesc[unit].samplerDesc.BorderColor);
+
+        mTexStageDesc[unit].samplerDesc.MaxAnisotropy = sampler.getAnisotropy();
+        mTexStageDesc[unit].samplerDesc.ComparisonFunc = D3D11Mappings::get(sampler.getCompareFunction());
+
+        FilterMinification[unit] = sampler.getFiltering(FT_MIN);
+        FilterMagnification[unit] = sampler.getFiltering(FT_MAG);
+        FilterMips[unit] = sampler.getFiltering(FT_MIP);
+
+        mTexStageDesc[unit].samplerDesc.Filter =
+            D3D11Mappings::get(FilterMinification[unit], FilterMagnification[unit], FilterMips[unit],
+                               sampler.getCompareEnabled());
     }
     //---------------------------------------------------------------------
     void D3D11RenderSystem::_setTextureMipmapBias(size_t unit, float bias)
@@ -1802,7 +1757,7 @@ namespace Ogre
     }
     //---------------------------------------------------------------------
     void D3D11RenderSystem::_setTextureAddressingMode( size_t stage, 
-        const TextureUnitState::UVWAddressingMode& uvw )
+        const Sampler::UVWAddressingMode& uvw )
     {
         // record the stage state
         mTexStageDesc[stage].samplerDesc.AddressU = D3D11Mappings::get(uvw.u);
@@ -1818,35 +1773,10 @@ namespace Ogre
         mSamplerStatesChanged = true;
     }
     //---------------------------------------------------------------------
-    void D3D11RenderSystem::_setSceneBlending( SceneBlendFactor sourceFactor, SceneBlendFactor destFactor, SceneBlendOperation op /*= SBO_ADD*/ )
-    {
-        if( sourceFactor == SBF_ONE && destFactor == SBF_ZERO)
-        {
-            mBlendDesc.RenderTarget[0].BlendEnable = FALSE;
-        }
-        else
-        {
-            mBlendDesc.RenderTarget[0].BlendEnable = TRUE;
-            mBlendDesc.RenderTarget[0].SrcBlend = D3D11Mappings::get(sourceFactor, false);
-            mBlendDesc.RenderTarget[0].DestBlend = D3D11Mappings::get(destFactor, false);
-            mBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11Mappings::get(sourceFactor, true);
-            mBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11Mappings::get(destFactor, true);
-            mBlendDesc.RenderTarget[0].BlendOp = mBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11Mappings::get(op);
-            
-            // feature level 9 and below does not support alpha to coverage.
-            if (mFeatureLevel < D3D_FEATURE_LEVEL_10_0)
-                mBlendDesc.AlphaToCoverageEnable = false;
-            else
-                mBlendDesc.AlphaToCoverageEnable = mSceneAlphaToCoverage;
-
-            mBlendDesc.RenderTarget[0].RenderTargetWriteMask = 0x0F;
-        }
-        mBlendDescChanged = true;
-    }
-    //---------------------------------------------------------------------
     void D3D11RenderSystem::_setSeparateSceneBlending( SceneBlendFactor sourceFactor, SceneBlendFactor destFactor, SceneBlendFactor sourceFactorAlpha, SceneBlendFactor destFactorAlpha, SceneBlendOperation op /*= SBO_ADD*/, SceneBlendOperation alphaOp /*= SBO_ADD*/ )
     {
-        if( sourceFactor == SBF_ONE && destFactor == SBF_ZERO)
+        if( sourceFactor == SBF_ONE && destFactor == SBF_ZERO && 
+            sourceFactorAlpha == SBF_ONE && destFactorAlpha == SBF_ZERO)
         {
             mBlendDesc.RenderTarget[0].BlendEnable = FALSE;
         }
@@ -2238,6 +2168,19 @@ namespace Ogre
     };
 
     //---------------------------------------------------------------------
+    void D3D11RenderSystem::_dispatchCompute(const Vector3i& workgroupDim)
+    {
+        // Bound unordered access views
+        mDevice.GetImmediateContext()->Dispatch(workgroupDim[0], workgroupDim[1], workgroupDim[2]);
+
+        // unbind
+        ID3D11UnorderedAccessView* views[] = { 0 };
+        ID3D11ShaderResourceView* srvs[] = { 0 };
+        mDevice.GetImmediateContext()->CSSetShaderResources( 0, 1, srvs );
+        mDevice.GetImmediateContext()->CSSetUnorderedAccessViews( 0, 1, views, NULL );
+        mDevice.GetImmediateContext()->CSSetShader( NULL, NULL, 0 );
+    }
+
     void D3D11RenderSystem::_render(const RenderOperation& op)
     {
 
@@ -2677,15 +2620,7 @@ namespace Ogre
         // Handle computing
         if(mBoundComputeProgram)
         {
-            // Bound unordered access views
-            mDevice.GetImmediateContext()->Dispatch(1, 1, 1);
-
-            ID3D11UnorderedAccessView* views[] = { 0 };
-            ID3D11ShaderResourceView* srvs[] = { 0 };
-            mDevice.GetImmediateContext()->CSSetShaderResources( 0, 1, srvs );
-            mDevice.GetImmediateContext()->CSSetUnorderedAccessViews( 0, 1, views, NULL );
-            mDevice.GetImmediateContext()->CSSetShader( NULL, NULL, 0 );
-
+            _dispatchCompute(Vector3i(mBoundComputeProgram->getComputeGroupDimensions()));
             return;
         }
         else if(mBoundTessellationHullProgram && mBoundTessellationDomainProgram)
@@ -2716,9 +2651,12 @@ namespace Ogre
         }
         else
         {
-            //rendering without tessellation.
-            bool useAdjacency = (mGeometryProgramBound && mBoundGeometryProgram && mBoundGeometryProgram->isAdjacencyInfoRequired());
-            switch( op.operationType )
+            //rendering without tessellation.   
+            int operationType = op.operationType;
+            if(mGeometryProgramBound && mBoundGeometryProgram && mBoundGeometryProgram->isAdjacencyInfoRequired())
+                operationType |= RenderOperation::OT_DETAIL_ADJACENCY_BIT;
+
+            switch( operationType )
             {
             case RenderOperation::OT_POINT_LIST:
                 primType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
@@ -2726,23 +2664,43 @@ namespace Ogre
                 break;
 
             case RenderOperation::OT_LINE_LIST:
-                primType = useAdjacency ? D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ : D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+                primType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
                 primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) / 2;
                 break;
 
+            case RenderOperation::OT_LINE_LIST_ADJ:
+                primType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+                primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) / 4;
+                break;
+
             case RenderOperation::OT_LINE_STRIP:
-                primType = useAdjacency ? D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ : D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+                primType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
                 primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) - 1;
                 break;
 
+            case RenderOperation::OT_LINE_STRIP_ADJ:
+                primType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ;
+                primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) - 2;
+                break;
+
             case RenderOperation::OT_TRIANGLE_LIST:
-                primType = useAdjacency ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+                primType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
                 primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) / 3;
                 break;
 
+            case RenderOperation::OT_TRIANGLE_LIST_ADJ:
+                primType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
+                primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) / 6;
+                break;
+
             case RenderOperation::OT_TRIANGLE_STRIP:
-                primType = useAdjacency ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+                primType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
                 primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) - 2;
+                break;
+
+            case RenderOperation::OT_TRIANGLE_STRIP_ADJ:
+                primType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ;
+                primCount = (DWORD)(op.useIndexes ? op.indexData->indexCount : op.vertexData->vertexCount) / 2 - 2;
                 break;
 
             case RenderOperation::OT_TRIANGLE_FAN:
@@ -3138,7 +3096,7 @@ namespace Ogre
         RenderSystem::unbindGpuProgram(gptype);
     }
     //---------------------------------------------------------------------
-    void D3D11RenderSystem::bindGpuProgramParameters(GpuProgramType gptype, GpuProgramParametersSharedPtr params, uint16 mask)
+    void D3D11RenderSystem::bindGpuProgramParameters(GpuProgramType gptype, const GpuProgramParametersPtr& params, uint16 mask)
     {
         if (mask & (uint16)GPV_GLOBAL)
         {
@@ -3392,10 +3350,6 @@ namespace Ogre
         
         // Set subroutine for slot
         setSubroutine(gptype, slotIdx, subroutineName);
-    }
-    //---------------------------------------------------------------------
-    void D3D11RenderSystem::setClipPlanesImpl(const PlaneList& clipPlanes)
-    {
     }
     //---------------------------------------------------------------------
     void D3D11RenderSystem::setScissorTest(bool enabled, size_t left, size_t top, size_t right,

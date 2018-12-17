@@ -42,25 +42,29 @@ if (APPLE AND NOT ANDROID)
   add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
 endif ()
 
-project(OGRE)
+project(OGRE VERSION 1.11.5)
+
+# extra version info
+set(OGRE_VERSION_SUFFIX "")
+set(OGRE_VERSION_NAME "Rhagorthua")
+
+# legacy defines
+set(OGRE_SOVERSION ${OGRE_VERSION})
+set(OGRE_VERSION_DASH_SEPARATED "${OGRE_VERSION_MAJOR}-${OGRE_VERSION_MINOR}-${OGRE_VERSION_PATCH}")
+
 
 # Include necessary submodules
 set(CMAKE_MODULE_PATH
-  "${OGRE_SOURCE_DIR}/CMake"
-  "${OGRE_SOURCE_DIR}/CMake/Utils"
-  "${OGRE_SOURCE_DIR}/CMake/Packages"
+  "${PROJECT_SOURCE_DIR}/CMake"
+  "${PROJECT_SOURCE_DIR}/CMake/Utils"
+  "${PROJECT_SOURCE_DIR}/CMake/Packages"
 )
-
-if(CMAKE_CROSSCOMPILING)
-  set(CMAKE_FIND_ROOT_PATH ${OGRE_DEPENDENCIES_DIR} "${CMAKE_FIND_ROOT_PATH}")
-endif()
 
 include(CMakeDependentOption)
 include(MacroLogFeature)
 include(OgreConfigTargets)
-include(PreprocessorUtils)
-set(OGRE_TEMPLATES_DIR "${OGRE_SOURCE_DIR}/CMake/Templates")
-set(OGRE_WORK_DIR ${OGRE_BINARY_DIR})
+set(OGRE_TEMPLATES_DIR "${PROJECT_SOURCE_DIR}/CMake/Templates")
+set(OGRE_WORK_DIR ${PROJECT_BINARY_DIR})
 
 
 #####################################################################
@@ -74,11 +78,9 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 # determine Ogre version numbers
-include(OgreGetVersion)
-ogre_get_version(${OGRE_SOURCE_DIR}/OgreMain/include/OgrePrerequisites.h)
 message(STATUS "Configuring OGRE ${OGRE_VERSION}")
 # Configure version file for use by scripts
-configure_file("${OGRE_TEMPLATES_DIR}/version.txt.in" "${OGRE_BINARY_DIR}/version.txt" @ONLY)
+configure_file("${OGRE_TEMPLATES_DIR}/version.txt.in" "${PROJECT_BINARY_DIR}/version.txt" @ONLY)
 
 # determine if we are compiling for a 32bit or 64bit system
 include(CheckTypeSize)
@@ -95,7 +97,7 @@ if (WIN32)
 endif ()
 
 # Set compiler specific build flags
-if (UNIX OR MINGW)
+if (NOT ANDROID AND UNIX OR MINGW)
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag(-msse OGRE_GCC_HAS_SSE)
   if (OGRE_GCC_HAS_SSE)
@@ -201,14 +203,14 @@ set(OGRE_Plugin_PCZSceneManager_LIBRARIES Plugin_PCZSceneManager)
 set(OGRE_Plugin_OctreeZone_LIBRARIES Plugin_OctreeZone)
 
 # Specify build paths
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OGRE_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OGRE_BINARY_DIR}/lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OGRE_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 if (WIN32 OR APPLE)
   if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     # We don't want to install in default system location, install is really for the SDK, so call it that
     set(CMAKE_INSTALL_PREFIX
-	  "${OGRE_BINARY_DIR}/sdk" CACHE PATH "OGRE install prefix" FORCE
+	  "${PROJECT_BINARY_DIR}/sdk" CACHE PATH "OGRE install prefix" FORCE
     )
   endif (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(WIN32 OR APPLE)
@@ -341,6 +343,7 @@ option(OGRE_BUILD_COMPONENT_HLMS "Build HLMS component" TRUE)
 cmake_dependent_option(OGRE_BUILD_COMPONENT_BITES "Build OgreBites component" TRUE "OGRE_BUILD_COMPONENT_OVERLAY" FALSE)
 cmake_dependent_option(OGRE_BUILD_COMPONENT_PYTHON "Build Python bindings" TRUE "NOT OGRE_STATIC" FALSE)
 option(OGRE_BUILD_COMPONENT_JAVA "Build Java (JNI) bindings" TRUE)
+cmake_dependent_option(OGRE_BUILD_COMPONENT_CSHARP "Build Csharp bindings" TRUE "NOT ANDROID" FALSE)
 option(OGRE_BUILD_COMPONENT_RTSHADERSYSTEM "Build RTShader System component" TRUE)
 cmake_dependent_option(OGRE_BUILD_RTSHADERSYSTEM_CORE_SHADERS "Build RTShader System FFP core shaders" TRUE "OGRE_BUILD_COMPONENT_RTSHADERSYSTEM" FALSE)
 cmake_dependent_option(OGRE_BUILD_RTSHADERSYSTEM_EXT_SHADERS "Build RTShader System extensions shaders" TRUE "OGRE_BUILD_COMPONENT_RTSHADERSYSTEM" FALSE)
@@ -391,15 +394,14 @@ option(OGRE_INSTALL_TOOLS "Install Ogre tools." TRUE)
 option(OGRE_INSTALL_DOCS "Install documentation." TRUE)
 option(OGRE_INSTALL_SAMPLES_SOURCE "Install samples source files." FALSE)
 cmake_dependent_option(OGRE_INSTALL_PDB "Install debug pdb files" TRUE "MSVC" FALSE)
-cmake_dependent_option(OGRE_FULL_RPATH "Build executables with the full required RPATH to run from their install location." FALSE "NOT WIN32" FALSE)
 option(OGRE_PROFILING "Enable internal profiling support." FALSE)
 cmake_dependent_option(OGRE_CONFIG_STATIC_LINK_CRT "Statically link the MS CRT dlls (msvcrt)" FALSE "MSVC" FALSE)
 set(OGRE_LIB_DIRECTORY "lib${LIB_SUFFIX}" CACHE STRING "Install path for libraries, e.g. 'lib64' on some 64-bit Linux distros.")
 if (WIN32)
 	option(OGRE_INSTALL_VSPROPS "Install Visual Studio Property Page." FALSE)
 	if (OGRE_INSTALL_VSPROPS)
-		configure_file(${OGRE_TEMPLATES_DIR}/OGRE.props.in ${OGRE_BINARY_DIR}/OGRE.props)
-		install(FILES ${OGRE_BINARY_DIR}/OGRE.props DESTINATION "${CMAKE_INSTALL_PREFIX}")
+		configure_file(${OGRE_TEMPLATES_DIR}/OGRE.props.in ${PROJECT_BINARY_DIR}/OGRE.props)
+		install(FILES ${PROJECT_BINARY_DIR}/OGRE.props DESTINATION "${CMAKE_INSTALL_PREFIX}")
 	endif ()
 endif ()
 
@@ -431,7 +433,6 @@ mark_as_advanced(
   OGRE_CONFIG_ENABLE_GLES3_SUPPORT
   OGRE_CONFIG_ENABLE_TBB_SCHEDULER
   OGRE_INSTALL_SAMPLES_SOURCE
-  OGRE_FULL_RPATH
   OGRE_PROFILING
   OGRE_CONFIG_STATIC_LINK_CRT
   OGRE_LIB_DIRECTORY
@@ -441,6 +442,9 @@ mark_as_advanced(
 # configure global build settings based on selected build options
 ###################################################################
 include(ConfigureBuild)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OGRE_LIB_DIRECTORY}")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 ###################################################################
 # disable way too common compiler warnings on project level
